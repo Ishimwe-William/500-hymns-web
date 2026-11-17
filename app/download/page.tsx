@@ -1,11 +1,9 @@
+import { publicMetadata } from "@/lib/site";
 import type { Metadata } from "next";
 import { SectionPage } from "@/components/section-page";
 import { MOBILE_APP_URL, TESTERS_GROUP_URL } from "@/lib/links";
 
-export const metadata: Metadata = {
-  title: "Download the beta | Indirimbo zo Guhimbaza Imana",
-  description: "Join the BunsenPlus testers group, then get the hymnbook beta from Google Play.",
-};
+export const metadata: Metadata = publicMetadata("Get the mobile beta", "Join the BunsenPlus testers group and download the Indirimbo Zo Guhimbaza Imana beta from Google Play for offline hymn access.", "/download");
 
 export default function DownloadPage() {
   return <SectionPage title="Get the mobile app" description="The app is currently in beta. Join our testers group first, then get the app from Google Play." sections={[

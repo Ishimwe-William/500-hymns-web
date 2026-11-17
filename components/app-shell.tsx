@@ -1,5 +1,6 @@
 "use client";
 
+import { HymnLibraryProvider } from "@/lib/hymn-library";
 import { SiteFooter } from "@/components/site-footer";
 import { DOWNLOAD_APP_URL } from "@/lib/links";
 import { matura } from "@/lib/fonts";
@@ -319,6 +320,7 @@ export function AppShell({
 
   return (
     <AuthProvider>
+    <HymnLibraryProvider hymns={hymns}>
     <PlayerProvider tracks={audioTracks}>
       <FavoritesProvider>
         <div className="flex min-h-screen flex-col bg-background">
@@ -359,6 +361,7 @@ export function AppShell({
         </div>
       </FavoritesProvider>
     </PlayerProvider>
+    </HymnLibraryProvider>
     </AuthProvider>
   );
 }

@@ -33,6 +33,10 @@ export function SearchModal({
     results.find((r) => r.id === selectedId) ?? results[0] ?? null;
 
   useEffect(() => {
+    if (selected) router.prefetch(`/hymns/${encodeURIComponent(selected.id)}`);
+  }, [router, selected]);
+
+  useEffect(() => {
     inputRef.current?.focus();
     inputRef.current?.select();
   }, []);

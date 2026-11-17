@@ -1,7 +1,10 @@
+import { APP_NAME, SITE_DESCRIPTION, publicMetadata } from "@/lib/site";
 import { Suspense } from "react";
 import { getHymns } from "@/lib/hymns-server";
 import { toSummaries } from "@/lib/hymns";
 import { HymnBrowser } from "@/components/hymn-browser";
+
+export const metadata = publicMetadata(APP_NAME, SITE_DESCRIPTION, "/hymns");
 
 async function HymnResults() {
   const hymns = toSummaries(await getHymns());

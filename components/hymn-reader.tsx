@@ -1,10 +1,12 @@
 "use client";
 
+import { openAudienceWindow, type AudienceWindow } from "@/lib/presentation-display";
+import { useHymnNeighbors } from "@/lib/hymn-library";
 import { orderedSections } from "@/lib/hymn-sections";
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-store";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { PresentationView } from "@/components/presentation-view";
 import type { Hymn } from "@/lib/hymns";
 import {
@@ -217,37 +219,34 @@ function HymnInfoCard({ hymn }: { hymn: Hymn }) {
   );
 }
 
-export function HymnReader({
-  hymn,
-  prev,
-  next,
-}: {
-  hymn: Hymn;
-  prev: { id: string; number: number; title: string } | null;
-  next: { id: string; number: number; title: string } | null;
-}) {
+const desktopInputQuery = "(hover: hover) and (pointer: fine)";
+function subscribeDesktopInput(callback: () => void) {
+  const media = window.matchMedia(desktopInputQuery);
+  media.addEventListener("change", callback);
+  return () => media.removeEventListener("change", callback);
+}
+function canPresentOnDevice() {
+  const mobile = /Android|iPhone|iPad|iPod|Mobile|Tablet/i.test(navigator.userAgent);
+  const desktopModeIPad = navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  return !mobile && !desktopModeIPad && window.matchMedia(desktopInputQuery).matches;
+}
+
+export function HymnReader({ hymn }: { hymn: Hymn }) {
+  const canPresent = useSyncExternalStore(subscribeDesktopInput, canPresentOnDevice, () => false);
+  const { prev, next } = useHymnNeighbors(hymn.id);
   const { isAdmin } = useAuth();
   const { has, toggle } = useFavorites();
   const fav = has(hymn.id);
   const { settings } = useReadingSettings();
-  const [presenting, setPresenting] = useState(false);
+  const [presentation, setPresentation] = useState<{ output: AudienceWindow | null } | null>(null);
 
   const startPresentation = () => {
-    setPresenting(true);
-    // Request directly from the click so the browser has user activation.
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
-      void document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {
-        // Keep the presentation available if fullscreen is unsupported or denied.
-      });
-    }
+    if (!canPresentOnDevice()) return;
+    // Open synchronously from the click so pop-up blockers do not reject it.
+    setPresentation({ output: openAudienceWindow() });
   };
 
-  const closePresentation = () => {
-    setPresenting(false);
-    if (document.fullscreenElement === document.documentElement) {
-      void document.exitFullscreen().catch(() => {});
-    }
-  };
+  const closePresentation = () => setPresentation(null);
 
 
 
@@ -268,14 +267,14 @@ export function HymnReader({
 
         <nav aria-label="Hymn navigation" className="flex shrink-0 items-center gap-2 lg:ml-auto">
           {prev && (
-            <Link href={`/hymns/${prev.id}`} title={`${prev.number}. ${prev.title}`} aria-label={`Previous hymn: ${prev.number}. ${prev.title}`} className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
+            <Link href={`/hymns/${prev.id}`} prefetch={true} title={`${prev.number}. ${prev.title}`} aria-label={`Previous hymn: ${prev.number}. ${prev.title}`} className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
               <IconChevronLeft width={16} height={16} />
               Previous {prev.number}
             </Link>
           )}
           <AudioButton hymn={hymn} />
           {next && (
-            <Link href={`/hymns/${next.id}`} title={`${next.number}. ${next.title}`} aria-label={`Next hymn: ${next.number}. ${next.title}`} className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
+            <Link href={`/hymns/${next.id}`} prefetch={true} title={`${next.number}. ${next.title}`} aria-label={`Next hymn: ${next.number}. ${next.title}`} className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
               Next {next.number}
               <IconChevronRight width={16} height={16} />
             </Link>
@@ -283,14 +282,14 @@ export function HymnReader({
         </nav>
 
         <div className="flex shrink-0 items-center gap-2">
-          <button
+          {canPresent && <button
             type="button"
             onClick={startPresentation}
             className="flex items-center gap-2 rounded-full bg-accent-strong px-4 py-2 text-sm font-medium text-white transition-transform hover:scale-[1.02] dark:text-black"
           >
             <IconPresent width={16} height={16} />
             Present
-          </button>
+          </button>}
           <ShareButton title={hymn.title} />
           {isAdmin && <Link href={`/admin/hymns/${hymn.id}/edit`} className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">Edit</Link>}
           <button
@@ -373,8 +372,8 @@ export function HymnReader({
       </div>
 
 
-      {presenting && (
-        <PresentationView hymn={hymn} onClose={closePresentation} />
+      {presentation && (
+        <PresentationView hymn={hymn} initialOutput={presentation.output} onClose={closePresentation} />
       )}
     </div>
   );

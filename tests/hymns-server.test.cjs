@@ -9,12 +9,16 @@ const sectionModule = { exports: {} };
 new Function("exports", "require", "module", compile("../lib/hymn-sections.ts"))(sectionModule.exports, require, sectionModule);
 function loader({ configured = true, docs = [], fail = false } = {}) {
   const lifetimes = [];
-  let reads = 0;
+  let reads = 0, documentReads = 0;
   const dependencies = {
     "@/lib/cache-tags": { HYMNS_CACHE_TAG: "hymns" },
     "next/cache": { cacheTag: () => {}, cacheLife: (profile) => lifetimes.push(profile) },
     "next/navigation": { unstable_rethrow: (error) => { if (error?.internal) throw error; } },
-    "firebase/firestore/lite": { getFirestore: () => ({}), collection: () => "hymns", getDocs: async () => { reads++; if (fail) throw fail === true ? new Error("Backend unavailable") : fail; return { docs }; } },
+    "firebase/firestore/lite": { doc: (_db, _collection, id) => id, getDoc: async (id) => {
+      documentReads++; if (fail) throw fail === true ? new Error("Backend unavailable") : fail;
+      const found = docs.find((document) => document.id === id);
+      return found ? { ...found, exists: () => true } : { id, exists: () => false };
+    }, getFirestore: () => ({}), collection: () => "hymns", getDocs: async () => { reads++; if (fail) throw fail === true ? new Error("Backend unavailable") : fail; return { docs }; } },
     "@/lib/firebase-app": { firebaseApp: configured ? {} : null, isFirebaseConfigured: configured },
     "@/lib/hymns": { lyricsTextFor: (sections) => sections.flatMap((s) => s.lines).join("\n") },
     "@/lib/hymn-sections": sectionModule.exports,
@@ -24,7 +28,7 @@ function loader({ configured = true, docs = [], fail = false } = {}) {
     assert.ok(name in dependencies, `Unexpected dependency: ${name}`);
     return dependencies[name];
   }, m, { error() {} });
-  return { ...m.exports, lifetimes, get reads() { return reads; } };
+  return { ...m.exports, lifetimes, get reads() { return reads; }, get documentReads() { return documentReads; } };
 }
 
 test("missing configuration never substitutes dummy hymns", async () => {
@@ -41,8 +45,8 @@ test("an empty collection remains empty with a short recovery cache", async () =
 test("backend failures never substitute generated titles", async () => {
   const h = loader({ fail: true });
   assert.deepEqual(await h.getHymns(), []);
-  assert.equal(await h.getHymnById("h-1"), undefined);
-  assert.deepEqual(h.lifetimes, ["seconds", "seconds"]);
+  await assert.rejects(h.getHymnById("h-1"), /could not be loaded/);
+  assert.deepEqual(h.lifetimes, ["seconds", "hours"]);
 });
 test("only valid backend hymns are returned, in numeric order", async () => {
   const h = loader({ docs: [
@@ -62,4 +66,11 @@ test("Next.js internal prerender signals are rethrown instead of becoming an emp
   const h = loader({ fail: internal });
   await assert.rejects(h.getHymns(), (error) => error === internal);
   assert.deepEqual(h.lifetimes, []);
+});
+
+test("opening one hymn fetches one document without loading the collection", async () => {
+  const h = loader({ docs: [{ id: "001", data: () => ({ number: 1, title: "Actual hymn", stanzas: [{ stanzaNumber: 1, text: "Real lyrics" }] }) }] });
+  const hymn = await h.getHymnById("001");
+  assert.equal(hymn.title, "Actual hymn"); assert.equal(h.documentReads, 1); assert.equal(h.reads, 0);
+  assert.equal(await h.getHymnById("missing"), undefined);
 });

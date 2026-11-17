@@ -1,12 +1,10 @@
+import { publicMetadata } from "@/lib/site";
 import { matura } from "@/lib/fonts";
 import type { Metadata } from "next";
 import { SectionPage } from "@/components/section-page";
 import { IconShield } from "@/components/icons";
 
-export const metadata: Metadata = {
-  title: "Privacy policy | Indirimbo zo Guhimbaza Imana",
-  description: "How Indirimbo zo Guhimbaza Imana handles your information and how to manage your data.",
-};
+export const metadata: Metadata = publicMetadata("Privacy policy", "Learn how Indirimbo Zo Guhimbaza Imana handles your information, your privacy choices, and how to request account or data deletion.", "/privacy");
 
 const sections = [
   {

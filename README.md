@@ -9,7 +9,8 @@ A digital hymnbook for browsing, reading, and presenting 500 Kinyarwanda hymns. 
 - List and grid views, with sorting by number or title.
 - Favorites, recently opened hymns, theme, text size, and verse-number preferences stored locally on the device.
 - Audio playback when a hymn has an audio source, with previous/next controls that skip hymns without recordings.
-- Fullscreen presentation with keyboard navigation and adjustable text size.
+- Live presentation with a local presenter preview, synchronized audience window, keyboard navigation, and adjustable text size.
+- Per-hymn search metadata, canonical URLs, structured data, branded sharing images, sitemap, and robots instructions.
 - Google sign-in and admin access using the same Firebase user roles as the mobile app.
 - Admin hymn editing with a live preview, original section numbering, editor attribution, and immediate cache invalidation after saves.
 - About, Profile, Settings, Admin, and Privacy pages with section sidebars and shareable hash links.
@@ -26,6 +27,18 @@ The mobile app supports offline access. To install the beta:
 3. Follow the testing page instructions to join the beta and install the app.
 
 All website download links lead to `/download`, where these steps are explained.
+
+## Presenting hymns
+
+Open a hymn and select **Present**. The presenter keeps a current and next-slide preview while a separate audience window displays the lyrics. Allow popups and display access when requested. Supported browsers can place the audience window on an external screen and request fullscreen there. If automatic display selection is unavailable, move the audience window to the projector and select **Enter fullscreen**. Browser permissions can require an additional click before fullscreen is allowed.
+
+Use the arrow keys to navigate, **B** to blank the audience screen, and **Escape** to end the presentation. Refrains repeat after stanzas during presentation. Ending the presentation closes the audience window.
+
+## Search and sharing
+
+Public hymn pages expose their actual title, original title, lyrics description, and a generated sharing image. `/sitemap.xml` lists the real hymns; `/robots.txt` excludes private account and administration routes. Set optional `GOOGLE_SITE_VERIFICATION` to the Search Console verification token. Metadata becomes public after deployment; search indexing and messaging preview caches are controlled by those services.
+
+Hymn detail navigation reads and caches the selected Firestore document instead of fetching the entire collection again. The shared library index supplies search and neighboring-hymn links, which prefetch their destination. Admin saves invalidate both caches.
 
 ## Stack
 
@@ -129,6 +142,8 @@ Browser checks cover public hymn navigation, responsive branding, and the brande
 ## Production
 
 Configure the Firebase environment variables in your hosting provider, enable Google sign-in, and authorize the deployed hostname in Firebase Authentication.
+
+For Vercel CLI deployments, `.vercelignore` excludes local builds, browser-test caches, reports, and environment files. Set production environment variables in Vercel project settings. Inspect the upload first with `vercel deploy --dry`; deploy with `vercel --prod`.
 
 ```powershell
 npm run build

@@ -1,13 +1,14 @@
 {
   "name": "500-hymns-web",
-  "version": "0.1.0",
+  "version": "0.1.1",
+  "author": "Ishimwe William",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/auth-session.test.cjs tests/hymn-sections.test.cjs tests/hymns-server.test.cjs tests/refresh-hymns.test.cjs tests/player-queue.test.cjs",
+    "test": "node --test tests/auth-session.test.cjs tests/hymn-sections.test.cjs tests/hymns-server.test.cjs tests/refresh-hymns.test.cjs tests/player-queue.test.cjs tests/site-metadata.test.cjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-hymns-web \"node --test tests/firestore.rules.test.cjs\"",
     "test:e2e": "playwright test"
   },

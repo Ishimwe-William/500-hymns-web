@@ -1,0 +1,25 @@
+# Dependencies and generated builds are recreated on Vercel.
+node_modules/
+.next/
+.next-*/
+out/
+build/
+
+# Local tests, caches, and reports.
+test-results/
+playwright-report/
+coverage/
+*.tsbuildinfo
+*-debug.log*
+npm-debug.log*
+yarn-error.log*
+
+# Local tools and environment files. Configure production values in Vercel.
+.git/
+.vercel/
+.idea/
+.devin/
+.agents/
+.codex/
+.env*
+!.env.example

@@ -1,7 +1,7 @@
 import { HYMNS_CACHE_TAG } from "@/lib/cache-tags";
 import { sectionsFromBlocks } from "@/lib/hymn-sections";
 import { cacheLife, cacheTag } from "next/cache";
-import { getFirestore, collection, getDocs, type DocumentData } from "firebase/firestore/lite";
+import { getFirestore, collection, getDocs, doc, getDoc, type DocumentData } from "firebase/firestore/lite";
 import { firebaseApp, isFirebaseConfigured } from "@/lib/firebase-app";
 import { unstable_rethrow } from "next/navigation";
 import {
@@ -70,7 +70,18 @@ export async function getHymns(): Promise<Hymn[]> {
   }
 }
 
+/** Detail pages read only their document, not the entire hymn collection. */
 export async function getHymnById(id: string): Promise<Hymn | undefined> {
-  const hymns = await getHymns();
-  return hymns.find((h) => h.id === id);
+  "use cache";
+  cacheTag(HYMNS_CACHE_TAG);
+  cacheLife("hours");
+  if (!id || id.includes("/") || id.length > 1500) return undefined;
+  if (!publicDb) throw new Error("The hymnbook is not configured.");
+  try {
+    const snapshot = await getDoc(doc(publicDb, COLLECTION, id));
+    return snapshot.exists() ? hymnFromDoc(snapshot.id, snapshot.data()) ?? undefined : undefined;
+  } catch (error) {
+    unstable_rethrow(error);
+    throw new Error("The hymn could not be loaded. Please try again.");
+  }
 }

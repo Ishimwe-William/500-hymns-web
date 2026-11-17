@@ -1,3 +1,4 @@
+import { publicMetadata } from "@/lib/site";
 import { DOWNLOAD_APP_URL } from "@/lib/links";
 import { matura } from "@/lib/fonts";
 import type { Metadata } from "next";
@@ -6,7 +7,7 @@ import { SectionPage } from "@/components/section-page";
 import { IconBook, IconDownload, IconHeart, IconLogo, IconSearch } from "@/components/icons";
 import { version } from "@/package.json";
 
-export const metadata: Metadata = { title: "About | Indirimbo zo Guhimbaza Imana" };
+export const metadata: Metadata = publicMetadata("About", "Discover the mission, features, and story behind Indirimbo Zo Guhimbaza Imana, a collection of 500 Kinyarwanda hymns.", "/about");
 const features = [
   { title: "A collection to treasure", description: "Browse five hundred Kinyarwanda hymns, bringing traditional and contemporary Christian music into one digital hymnbook.", icon: IconBook },
   { title: "Find the words you know", description: "Search by hymn number, title, original title, or a phrase from the lyrics.", icon: IconSearch },

@@ -1,0 +1,50 @@
+/* Keep presenter controls in the viewport; only the slide list scrolls. */
+.presenter-viewport { height: 100dvh; }
+.presenter-layout {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 16px;
+}
+.presenter-layout > header,
+.presenter-layout > div:not(.presenter-previews) {
+  flex-wrap: nowrap;
+  min-width: 0;
+  overflow-x: auto;
+  padding: 10px 12px;
+}
+.presenter-layout > header > div { min-width: 0; }
+.presenter-layout > header h2 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.presenter-layout button { flex-shrink: 0; }
+.presenter-layout > div:not(.presenter-previews) > div { flex-shrink: 0; }
+.presenter-previews {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 16px;
+}
+.presenter-current,
+.presenter-next { min-width: 0; min-height: 0; display: grid; gap: 10px; }
+.presenter-current { grid-template-rows: auto minmax(0, 1fr); }
+.presenter-next { grid-template-rows: auto minmax(0, 1fr) auto minmax(0, 1fr); }
+.presenter-live-slide,
+.presenter-next-slide,
+.presenter-slide-list { min-height: 0; }
+.presenter-slide-list { align-content: start; }
+@media (max-width: 639px) {
+  .presenter-layout { padding: 8px; gap: 8px; }
+  .presenter-previews { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 3fr) minmax(0, 2fr); gap: 8px; }
+  .presenter-next { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+  .presenter-next > h3 { grid-column: 1 / -1; }
+  .presenter-next > p { display: none; }
+  .presenter-layout button { padding: 6px 10px; font-size: 12px; }
+}
+@media (max-height: 550px) {
+  .presenter-layout { gap: 6px; padding: 8px; }
+  .presenter-layout > header p,
+  .presenter-next > p { display: none; }
+  .presenter-next { grid-template-rows: auto minmax(0, 1fr) minmax(0, 1fr); }
+  .presenter-layout > header h2 { font-size: 16px; }
+  .presenter-layout button { padding-top: 5px; padding-bottom: 5px; }
+}
