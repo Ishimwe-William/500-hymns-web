@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { Suspense, type ReactNode } from "react";
 import { Roboto } from "next/font/google";
+import { matura } from "@/lib/fonts";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
 import { getHymns } from "@/lib/hymns-server";
@@ -12,21 +14,29 @@ const roboto = Roboto({
 });
 
 export const metadata: Metadata = {
-  title: "500 Kinyarwanda Hymns",
+  title: "Indirimbo zo Guhimbaza Imana",
   description: "A digital hymnbook of 500 Kinyarwanda hymns.",
 };
 
 const themeScript = `(function(){try{var t=JSON.parse(localStorage.getItem("hymns:theme"));if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark")}}catch(e){}})();`;
 
-export default async function RootLayout({ children }: LayoutProps<"/">) {
-  const hymns = toSummaries(await getHymns());
+async function HymnApp({ children }: { children: ReactNode }) {
+  const all = await getHymns();
+  const hymns = toSummaries(all);
+  const audioTracks = all.filter((hymn) => Boolean(hymn.audioUrl?.trim())).map(({ id, number, title, audioUrl }) => ({ id, number, title, audioUrl }));
+  return <AppShell hymns={hymns} audioTracks={audioTracks}>{children}</AppShell>;
+}
+
+export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={`${roboto.variable} h-full antialiased`}>
+    <html lang="en" className={`${roboto.variable} ${matura.variable} h-full antialiased`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full bg-background font-sans text-foreground">
-        <AppShell hymns={hymns}>{children}</AppShell>
+        <Suspense fallback={<div role="status" className="p-8 text-center text-muted">Loading hymnbook...</div>}>
+          <HymnApp>{children}</HymnApp>
+        </Suspense>
       </body>
     </html>
   );

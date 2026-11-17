@@ -1,51 +1,19 @@
-import { cacheLife } from "next/cache";
-import { collection, getDocs, type DocumentData } from "firebase/firestore";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
+import { HYMNS_CACHE_TAG } from "@/lib/cache-tags";
+import { sectionsFromBlocks } from "@/lib/hymn-sections";
+import { cacheLife, cacheTag } from "next/cache";
+import { getFirestore, collection, getDocs, type DocumentData } from "firebase/firestore/lite";
+import { firebaseApp, isFirebaseConfigured } from "@/lib/firebase-app";
+import { unstable_rethrow } from "next/navigation";
 import {
-  MOCK_HYMNS,
   lyricsTextFor,
   type Hymn,
-  type HymnSection,
 } from "@/lib/hymns";
 
 const COLLECTION = "hymns";
+const publicDb = firebaseApp ? getFirestore(firebaseApp) : null;
 
 function asString(v: unknown): string | undefined {
   return typeof v === "string" && v.trim() ? v : undefined;
-}
-
-interface TextBlock {
-  text?: unknown;
-  stanzaNumber?: unknown;
-  refrainNumber?: unknown;
-}
-
-function asSections(d: DocumentData): HymnSection[] {
-  const sections: HymnSection[] = [];
-
-  const stanzas = Array.isArray(d.stanzas) ? (d.stanzas as TextBlock[]) : [];
-  stanzas.forEach((s, i) => {
-    if (typeof s?.text !== "string" || !s.text.trim()) return;
-    const n = Number(s.stanzaNumber) || i + 1;
-    sections.push({
-      type: "verse",
-      label: `Verse ${n}`,
-      lines: s.text.split("\n").map((l) => l.trim()).filter(Boolean),
-    });
-  });
-
-  const refrains = Array.isArray(d.refrains) ? (d.refrains as TextBlock[]) : [];
-  refrains.forEach((r, i) => {
-    if (typeof r?.text !== "string" || !r.text.trim()) return;
-    const n = Number(r.refrainNumber) || i + 1;
-    sections.push({
-      type: "refrain",
-      label: `Refrain ${n}`,
-      lines: r.text.split("\n").map((l) => l.trim()).filter(Boolean),
-    });
-  });
-
-  return sections;
 }
 
 function hymnFromDoc(id: string, d: DocumentData): Hymn | null {
@@ -54,7 +22,7 @@ function hymnFromDoc(id: string, d: DocumentData): Hymn | null {
   const category = asString(d.category) ?? "Other";
   if (!Number.isFinite(number) || !title) return null;
 
-  const sections = asSections(d);
+  const sections = sectionsFromBlocks(d.stanzas, d.refrains);
   const audioUrl = asString(d.audioUrl);
   const youtubeId = asString(d.youtube);
   const lyricsText = asString(d.lyricsText) ?? lyricsTextFor(sections);
@@ -76,33 +44,33 @@ function hymnFromDoc(id: string, d: DocumentData): Hymn | null {
   };
 }
 
-/**
- * Fetches the full hymnbook. Uses the Firestore `hymns` collection when
- * Firebase env vars are configured; otherwise falls back to the bundled
- * mock hymnbook so the app still runs in development.
- */
+/** Fetch only real hymns from Firestore; never substitute generated content. */
 export async function getHymns(): Promise<Hymn[]> {
   "use cache";
-  cacheLife("hours");
-
-  if (!isFirebaseConfigured || !db) return MOCK_HYMNS;
+  cacheTag(HYMNS_CACHE_TAG);
+  if (!isFirebaseConfigured || !publicDb) {
+    cacheLife("seconds");
+    return [];
+  }
 
   try {
-    const snap = await getDocs(collection(db, COLLECTION));
+    const snap = await getDocs(collection(publicDb, COLLECTION));
     const list = snap.docs
       .map((doc) => hymnFromDoc(doc.id, doc.data()))
       .filter((h): h is Hymn => h !== null)
       .sort((a, b) => a.number - b.number);
-    return list.length > 0 ? list : MOCK_HYMNS;
+    if (list.length > 0) cacheLife("hours");
+    else cacheLife("seconds");
+    return list;
   } catch (err) {
+    unstable_rethrow(err);
     console.error("Failed to fetch hymns from Firestore:", err);
-    return MOCK_HYMNS;
+    cacheLife("seconds");
+    return [];
   }
 }
 
 export async function getHymnById(id: string): Promise<Hymn | undefined> {
-  "use cache";
-  cacheLife("minutes");
   const hymns = await getHymns();
   return hymns.find((h) => h.id === id);
 }

@@ -41,3 +41,14 @@ yarn-error.log*
 next-env.d.ts
 /.idea/
 /.devin/
+
+.vercel
+
+# Local Firebase emulator logs
+firestore-debug.log
+
+# Browser test artifacts
+/test-results/
+/playwright-report/
+
+/.next-e2e/

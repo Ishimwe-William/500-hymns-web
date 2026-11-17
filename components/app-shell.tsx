@@ -1,11 +1,16 @@
 "use client";
 
+import { SiteFooter } from "@/components/site-footer";
+import { DOWNLOAD_APP_URL } from "@/lib/links";
+import { matura } from "@/lib/fonts";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { AuthProvider, useAuth } from "@/lib/auth-store";
+import { usePathname } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { FavoritesProvider, PlayerProvider, useTheme } from "@/lib/client-store";
 import { AudioPlayer } from "@/components/audio-player";
 import { SearchModal } from "@/components/search-modal";
+import type { PlayerHymn } from "@/lib/player-queue";
 import type { HymnSummary } from "@/lib/hymns";
 import {
   IconBook,
@@ -24,17 +29,16 @@ import {
   IconClose,
 } from "@/components/icons";
 
-const MOBILE_APP_URL = process.env.NEXT_PUBLIC_MOBILE_APP_URL ?? "#";
 
 const NAV = [
   { href: "/hymns", label: "Hymns", icon: IconBook },
   { href: "/favorites", label: "Favorites", icon: IconHeart },
   { href: "/recent", label: "Recent", icon: IconClock },
+  { href: "/about", label: "About", icon: IconInfo },
 ];
 
 const SECONDARY_NAV = [
   { href: "/settings", label: "Settings", icon: IconSettings },
-  { href: "/about", label: "About", icon: IconInfo },
   { href: "/profile", label: "Profile", icon: IconUser },
 ];
 
@@ -55,10 +59,11 @@ function navLinkClass(pathname: string, href: string) {
 
 function DrawerContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
+  const { isAdmin } = useAuth();
   const allLinks = [
     ...NAV,
     ...SECONDARY_NAV,
-    { href: "/admin", label: "Admin", icon: IconShield },
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: IconShield }] : []),
   ];
 
   return (
@@ -69,12 +74,9 @@ function DrawerContent({ onNavigate }: { onNavigate?: () => void }) {
         className="flex items-center gap-3 px-5 pb-6 pt-6"
       >
         <IconLogo />
-        <div>
-          <p className="text-[17px] font-bold leading-tight text-foreground">
-            500 Kinyarwanda
-          </p>
-          <p className="text-[13px] font-medium text-accent">Hymns</p>
-        </div>
+        <p className={`${matura.className} text-[17px] leading-snug text-center text-foreground`}>
+          Indirimbo Zo<br />Guhimbaza Imana
+        </p>
       </Link>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-3">
@@ -96,16 +98,14 @@ function DrawerContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="space-y-1 border-t border-border px-3 py-4">
-        <a
-          href={MOBILE_APP_URL}
-          target="_blank"
-          rel="noreferrer"
+        <Link
+          href={DOWNLOAD_APP_URL}
           onClick={onNavigate}
           className="flex items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium text-muted transition-colors hover:bg-accent-soft/60 hover:text-foreground"
         >
           <IconDownload width={20} height={20} />
           Download mobile app
-        </a>
+        </Link>
       </div>
     </div>
   );
@@ -118,7 +118,7 @@ function Navbar({
   onMenu: () => void;
   hymns: HymnSummary[];
 }) {
-  const router = useRouter();
+  const { user, isAdmin } = useAuth();
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
   const [q, setQ] = useState("");
@@ -145,8 +145,8 @@ function Navbar({
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = q.trim();
-    setSearchOpen(false);
-    router.push(trimmed ? `/search?q=${encodeURIComponent(trimmed)}` : "/search");
+    if (!trimmed) return;
+    setSearchOpen(true);
   };
 
   return (
@@ -165,11 +165,8 @@ function Navbar({
         {/* Brand */}
         <Link href="/hymns" className="flex shrink-0 items-center gap-2.5">
           <IconLogo />
-          <span className="hidden text-[15px] font-bold leading-tight text-foreground sm:block">
-            500 Kinyarwanda
-            <span className="block text-[12px] font-medium text-accent">
-              Hymns
-            </span>
+          <span className={`${matura.className} hidden  text-[15px] leading-snug text-center text-foreground sm:block`}>
+            Indirimbo Zo<br />Guhimbaza Imana
           </span>
         </Link>
 
@@ -179,16 +176,13 @@ function Navbar({
             <Link
               key={item.href}
               href={item.href}
+              aria-label={item.label}
               className={navLinkClass(pathname, item.href)}
             >
               <item.icon width={17} height={17} />
               <span className="hidden xl:inline">{item.label}</span>
             </Link>
           ))}
-          <Link href="/admin" className={navLinkClass(pathname, "/admin")}>
-            <IconShield width={17} height={17} />
-            <span className="hidden xl:inline">Admin</span>
-          </Link>
         </div>
 
         {/* Search */}
@@ -210,16 +204,14 @@ function Navbar({
 
         {/* Theme + profile menu */}
         <div className="relative ml-auto flex items-center gap-1.5 md:ml-0">
-          <a
-            href={MOBILE_APP_URL}
-            target="_blank"
-            rel="noreferrer"
+          <Link
+            href={DOWNLOAD_APP_URL}
             aria-label="Download mobile app"
             title="Download mobile app"
             className="hidden rounded-full p-2.5 text-muted transition-colors hover:bg-accent-soft hover:text-foreground lg:block"
           >
             <IconDownload width={19} height={19} />
-          </a>
+          </Link>
           <button
             type="button"
             onClick={toggle}
@@ -240,7 +232,7 @@ function Navbar({
               aria-expanded={menuOpen}
               className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent-ink transition-transform hover:scale-105 dark:text-accent-ink"
             >
-              <IconUser width={17} height={17} />
+              {user?.displayName || user?.email ? <span className="text-sm font-semibold">{(user.displayName ?? user.email ?? "").slice(0, 1).toUpperCase()}</span> : <IconUser width={17} height={17} />}
             </button>
             {menuOpen && (
               <>
@@ -253,8 +245,8 @@ function Navbar({
                 <div className="absolute right-0 top-11 z-50 w-52 overflow-hidden rounded-xl border border-border bg-card py-1.5 shadow-lg">
                   {[
                     { href: "/profile", label: "Profile", icon: IconUser },
+                    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: IconShield }] : []),
                     { href: "/settings", label: "Settings", icon: IconSettings },
-                    { href: "/about", label: "About", icon: IconInfo },
                   ].map((item) => (
                     <Link
                       key={item.href}
@@ -270,16 +262,14 @@ function Navbar({
                       {item.label}
                     </Link>
                   ))}
-                  <a
-                    href={MOBILE_APP_URL}
-                    target="_blank"
-                    rel="noreferrer"
+                  <Link
+                    href={DOWNLOAD_APP_URL}
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-2.5 border-t border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-accent-soft/60"
                   >
                     <IconDownload width={16} height={16} className="text-muted" />
                     Download mobile app
-                  </a>
+                  </Link>
                 </div>
               </>
             )}
@@ -319,14 +309,17 @@ function Navbar({
 export function AppShell({
   children,
   hymns,
+  audioTracks,
 }: {
   children: ReactNode;
   hymns: HymnSummary[];
+  audioTracks: PlayerHymn[];
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <PlayerProvider>
+    <AuthProvider>
+    <PlayerProvider tracks={audioTracks}>
       <FavoritesProvider>
         <div className="flex min-h-screen flex-col bg-background">
           <Suspense
@@ -358,12 +351,14 @@ export function AppShell({
             </div>
           )}
 
-          <main className="flex-1 px-4 pb-32 pt-6 sm:px-6 lg:px-10 lg:pt-10">
-            {children}
+          <main className="flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-10 lg:pt-10">
+            <div className="mx-auto w-full max-w-6xl">{children}</div>
           </main>
+          <SiteFooter />
           <AudioPlayer />
         </div>
       </FavoritesProvider>
     </PlayerProvider>
+    </AuthProvider>
   );
 }

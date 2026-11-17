@@ -1,25 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { SectionPage } from "@/components/section-page";
+import { DOWNLOAD_APP_URL } from "@/lib/links";
+import { useAuth } from "@/lib/auth-store";
 import { useReadingSettings, useTheme } from "@/lib/client-store";
 import { IconDownload } from "@/components/icons";
-
-function Card({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-2xl border border-border bg-card p-6">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-        {title}
-      </h3>
-      <div className="mt-4 divide-y divide-border">{children}</div>
-    </section>
-  );
-}
 
 function Row({
   label,
@@ -33,8 +19,8 @@ function Row({
   return (
     <div className="flex items-center justify-between gap-4 py-3.5 first:pt-0 last:pb-0">
       <div>
-        <p className="text-sm font-medium text-foreground">{label}</p>
-        {description && <p className="mt-0.5 text-xs text-muted">{description}</p>}
+        <p className="text-[15px] font-medium text-foreground">{label}</p>
+        {description && <p className="mt-0.5 text-[13px] text-muted">{description}</p>}
       </div>
       <div className="shrink-0">{children}</div>
     </div>
@@ -71,17 +57,13 @@ function Toggle({
 }
 
 export default function SettingsPage() {
+  const { user, loading } = useAuth();
   const { theme, set } = useTheme();
   const { settings, update } = useReadingSettings();
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <header className="space-y-1">
-        <h2 className="text-3xl font-bold text-foreground">Settings</h2>
-        <p className="text-muted">Tune the hymnbook to your liking.</p>
-      </header>
-
-      <Card title="Appearance">
+    <SectionPage title="Settings" description="Choose how the hymnbook looks and reads." sections={[
+      { id: "appearance", title: "Appearance", content: <div className="divide-y divide-border">
         <Row label="Theme" description="Light or dark interface">
           <div className="grid grid-cols-2 gap-2">
             {(["light", "dark"] as const).map((t) => (
@@ -127,16 +109,8 @@ export default function SettingsPage() {
             </button>
           </div>
         </Row>
-      </Card>
-
-      <Card title="Reading">
-        <Row label="Show chords" description="Display chord symbols above lyrics">
-          <Toggle
-            label="Show chords"
-            checked={settings.showChords}
-            onChange={(v) => update({ showChords: v })}
-          />
-        </Row>
+      </div> },
+      { id: "reading", title: "Reading", content: <div className="divide-y divide-border">
         <Row label="Show verse numbers" description="Label verses and refrains">
           <Toggle
             label="Show verse numbers"
@@ -144,61 +118,32 @@ export default function SettingsPage() {
             onChange={(v) => update({ showVerseNumbers: v })}
           />
         </Row>
-      </Card>
-
-      <Card title="Notifications">
-        <Row label="Daily verse" description="Receive a hymn each morning">
-          <Toggle label="Daily verse" checked={false} onChange={() => {}} />
+      </div> },
+      { id: "saved-data", title: "Saved data", content: <div className="divide-y divide-border">
+        <Row label="Favorites" description="Your saved hymns on this device">
+          <Link href="/favorites" className="text-sm font-medium text-accent-strong hover:underline dark:text-accent">View favorites</Link>
         </Row>
-        <Row label="New hymns" description="Notify when new hymns are added">
-          <Toggle label="New hymns" checked={false} onChange={() => {}} />
+        <Row label="Recent hymns" description="Hymns recently opened on this device">
+          <Link href="/recent" className="text-sm font-medium text-accent-strong hover:underline dark:text-accent">View recent hymns</Link>
         </Row>
-      </Card>
-
-      <Card title="Data and sync">
-        <Row label="Sync status" description="Last synced just now">
-          <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent-ink dark:text-accent-ink">
-            Up to date
-          </span>
-        </Row>
-        <Row label="Sync now" description="Manually sync favorites and recents">
-          <button
-            type="button"
-            className="rounded-full border border-border px-4 py-1.5 text-sm font-medium text-foreground hover:bg-accent-soft"
-          >
-            Sync
-          </button>
-        </Row>
-      </Card>
-
-      <Card title="Offline storage">
-        <Row
-          label="Downloaded audio"
-          description="Audio files saved on this device"
-        >
-          <span className="flex items-center gap-1.5 text-sm text-muted">
-            <IconDownload width={15} height={15} /> 0 files
-          </span>
-        </Row>
-        <Row label="Storage used" description="Of available offline space">
-          <span className="text-sm text-muted">12 MB / 500 MB</span>
-        </Row>
-        <p className="pt-3 text-xs text-muted">
-          Note: offline downloads require browser storage support, which will
-          be confirmed during implementation.
-        </p>
-      </Card>
-
-      <Card title="Account">
-        <Row label="Status" description="You are browsing as a guest">
+      </div> },
+      { id: "offline-storage", title: "Offline access", content: <>
+        <p>Audio downloads are not available on the website. An internet connection is required to load hymns and play audio.</p>
+        <p>Your favorites, recent hymns, and reading preferences are saved on this device when browser storage is available.</p>
+        <Link href={DOWNLOAD_APP_URL} className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
+          <IconDownload width={15} height={15} /> Get the mobile app for offline access
+        </Link>
+      </> },
+      { id: "account", title: "Account", content: <div className="divide-y divide-border">
+        <Row label="Status" description={loading ? "Loading account..." : user?.email ?? "You are browsing as a guest"}>
           <Link
             href="/profile"
             className="rounded-full bg-accent-strong px-4 py-1.5 text-sm font-medium text-white dark:text-black"
           >
-            Sign in
+            {user ? "View profile" : "Sign in"}
           </Link>
         </Row>
-      </Card>
-    </div>
+      </div> },
+    ]} />
   );
 }

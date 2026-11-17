@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { presentationSections } from "@/lib/hymn-sections";
 import type { Hymn } from "@/lib/hymns";
 import {
   IconChevronLeft,
@@ -17,9 +18,7 @@ export function PresentationView({
   hymn: Hymn;
   onClose: () => void;
 }) {
-  const sections = hymn.sections.filter((s) =>
-    s.lines.some((l) => l.trim())
-  );
+  const sections = presentationSections(hymn.sections);
   const [index, setIndex] = useState(0);
   const [sizeIndex, setSizeIndex] = useState(2);
   const fontSize = SIZES[sizeIndex];
@@ -44,6 +43,15 @@ export function PresentationView({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+
+  // Escape and the browser's own fullscreen controls also end presentation.
+  useEffect(() => {
+    const onFullscreenChange = () => {
+      if (!document.fullscreenElement) onClose();
+    };
+    document.addEventListener("fullscreenchange", onFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", onFullscreenChange);
+  }, [onClose]);
 
   // Prevent background scroll while presenting.
   useEffect(() => {

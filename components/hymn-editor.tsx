@@ -1,38 +1,42 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { refreshHymnsAfterSave } from "@/app/actions/refresh-hymns";
 import { useState } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import type { Hymn, HymnSection } from "@/lib/hymns";
-import { db, isFirebaseConfigured } from "@/lib/firebase";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { orderedSections, sectionsToBlocks } from "@/lib/hymn-sections";
+import { lyricsTextFor, type Hymn, type HymnSection } from "@/lib/hymns";
+import { useAuth } from "@/lib/auth-store";
+import { db, getFirebaseAuth } from "@/lib/firebase";
 import { IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
 
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveState = "idle" | "saving" | "saved" | "saved-stale" | "error";
 
 const inputCls =
   "w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground outline-none focus:border-accent";
 
 export function HymnEditor({
   hymn,
-  categories,
 }: {
   hymn: Hymn;
-  categories: string[];
 }) {
+  const router = useRouter();
+  const { user, isAdmin, checkingRole } = useAuth();
   const [number, setNumber] = useState(String(hymn.number));
   const [title, setTitle] = useState(hymn.title);
-  const [category, setCategory] = useState(hymn.category);
   const [origin, setOrigin] = useState(hymn.origin ?? "");
   const [keySig, setKeySig] = useState(hymn.key ?? "");
   const [audioUrl, setAudioUrl] = useState(hymn.youtubeUrl ?? "");
   const [sections, setSections] = useState<HymnSection[]>(
-    hymn.sections.map((s) => ({ ...s, lines: [...s.lines] }))
+    orderedSections(hymn.sections).map((s) => ({ ...s, lines: [...s.lines] }))
   );
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [errors, setErrors] = useState<string[]>([]);
 
   const markDirty = () => {
+    setErrors([]);
     setDirty(true);
     setSaveState("idle");
   };
@@ -43,14 +47,10 @@ export function HymnEditor({
   };
 
   const addSection = (type: HymnSection["type"]) => {
-    setSections((prev) => [
-      ...prev,
-      {
-        type,
-        label: type === "refrain" ? "Refrain" : `Verse ${prev.filter((s) => s.type === "verse").length + 1}`,
-        lines: [""],
-      },
-    ]);
+    setSections((prev) => {
+      const number = Math.max(0, ...prev.filter((s) => s.type === type).map((s) => s.number ?? 0)) + 1;
+      return [...prev, { type, number, label: `${type === "verse" ? "Verse" : "Refrain"} ${number}`, lines: [""] }];
+    });
     markDirty();
   };
 
@@ -59,7 +59,28 @@ export function HymnEditor({
     markDirty();
   };
 
-  const save = () => {
+  const refreshSavedHymn = async () => {
+    setSaveState("saving");
+    try {
+      if (!user) throw new Error("Signed out");
+      const result = await refreshHymnsAfterSave(await user.getIdToken());
+      if (!result.ok) throw new Error("Refresh failed");
+      setErrors([]);
+      setSaveState("saved");
+      router.refresh();
+      window.setTimeout(() => setSaveState("idle"), 2500);
+    } catch {
+      setSaveState("saved-stale");
+      setErrors(["Your changes were saved to the database, but the displayed hymn could not be refreshed. Use Retry refresh to update it without saving again."]);
+    }
+  };
+
+  const save = async () => {
+    if (!user || !isAdmin || checkingRole || !db || getFirebaseAuth()?.currentUser?.uid !== user.uid) {
+      setErrors(["You must be signed in as an administrator to save changes."]);
+      setSaveState("error");
+      return;
+    }
     const errs: string[] = [];
     if (!title.trim()) errs.push("Title is required");
     if (!Number(number) || Number(number) < 1) errs.push("Number must be a positive integer");
@@ -78,51 +99,40 @@ export function HymnEditor({
     const ytMatch = link.match(
       /(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{6,})/
     );
-    const stanzas = sections
-      .filter((s) => s.type === "verse")
-      .map((s, i) => ({ stanzaNumber: i + 1, text: s.lines.join("\n") }));
-    const refrains = sections
-      .filter((s) => s.type === "refrain")
-      .map((s, i) => ({ refrainNumber: i + 1, text: s.lines.join("\n") }));
+    const { stanzas, refrains } = sectionsToBlocks(sections);
 
     const payload: Record<string, unknown> = {
       number: Number(number),
       title: title.trim(),
-      category,
       origin: origin.trim() || null,
       doh: keySig.trim() || null,
       stanzas,
       refrains,
-      updatedAt: new Date().toISOString(),
+      lyricsText: lyricsTextFor(orderedSections(sections)),
+      updatedAt: serverTimestamp(),
+      updatedBy: { uid: user.uid, email: user.email, displayName: user.displayName },
     };
     if (ytMatch) payload.youtube = ytMatch[1];
     else if (link) payload.audioUrl = link;
 
-    const finish = () => {
-      setSaveState("saved");
+    try {
+      await updateDoc(doc(db, "hymns", hymn.id), payload);
       setDirty(false);
-      window.setTimeout(() => setSaveState("idle"), 2500);
-    };
-
-    if (isFirebaseConfigured && db) {
-      updateDoc(doc(db, "hymns", hymn.id), payload)
-        .then(finish)
-        .catch(() => {
-          // Firestore rules may reject writes for non-admins — keep UI usable.
-          window.setTimeout(finish, 800);
-        });
-    } else {
-      // No Firebase config — simulate a save so the UI flow still works.
-      window.setTimeout(finish, 800);
+    } catch (error) {
+      const denied = error && typeof error === "object" && "code" in error && error.code === "permission-denied";
+      setErrors([denied ? "Your account does not have permission to save this hymn." : "Changes could not be saved. Check your connection and try again."]);
+      setSaveState("error");
+      return;
     }
+    await refreshSavedHymn();
   };
 
-  const previewSections = sections.filter((s) =>
+  const previewSections = orderedSections(sections).filter((s) =>
     s.lines.some((l) => l.trim())
   );
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="w-full space-y-6">
       {/* Breadcrumb */}
       <nav className="flex items-center gap-2 text-sm text-muted">
         <Link href="/admin" className="hover:text-foreground">
@@ -148,8 +158,9 @@ export function HymnEditor({
               Saved ✓
             </span>
           )}
+          {saveState === "saved-stale" && <span className="font-medium text-muted">Saved; refresh needed</span>}
           {saveState === "error" && (
-            <span className="font-medium text-red-500">Validation errors</span>
+            <span className="font-medium text-red-500">Changes not saved</span>
           )}
         </div>
         <div className="flex items-center gap-2">
@@ -159,10 +170,11 @@ export function HymnEditor({
           >
             Cancel
           </Link>
+          {saveState === "saved-stale" && <button type="button" onClick={refreshSavedHymn} className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">Retry refresh</button>}
           <button
             type="button"
             onClick={save}
-            disabled={saveState === "saving"}
+            disabled={saveState === "saving" || !isAdmin || checkingRole}
             className="rounded-full bg-accent-strong px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60 dark:text-black"
           >
             Save changes
@@ -229,25 +241,6 @@ export function HymnEditor({
           </label>
 
           <div className="grid grid-cols-2 gap-4">
-            <label className="block">
-              <span className="mb-1.5 block text-sm font-medium text-foreground">
-                Category
-              </span>
-              <select
-                className={inputCls}
-                value={category}
-                onChange={(e) => {
-                  setCategory(e.target.value);
-                  markDirty();
-                }}
-              >
-                {categories.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
-                ))}
-              </select>
-            </label>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-foreground">
                 Origin
@@ -323,6 +316,19 @@ export function HymnEditor({
                     >
                       {section.type}
                     </span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={1}
+                      className="w-16 rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground outline-none"
+                      value={section.number ?? 0}
+                      onChange={(e) => {
+                        const number = Number(e.target.value);
+                        if (!Number.isInteger(number) || number < 0) return;
+                        updateSection(si, { number, label: `${section.type === "verse" ? "Verse" : "Refrain"} ${number}` });
+                      }}
+                      aria-label="Section number"
+                    />
                     <input
                       className="w-28 rounded-lg border border-border bg-background px-2 py-1 text-xs text-foreground outline-none"
                       value={section.label}

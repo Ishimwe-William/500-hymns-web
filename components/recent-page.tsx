@@ -47,7 +47,7 @@ export default function RecentPage({ hymns }: { hymns: HymnSummary[] }) {
   const total = groups.reduce((n, g) => n + g.items.length, 0);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <header className="space-y-1">
         <h2 className="text-3xl font-bold text-foreground">Recently opened</h2>
         <p className="text-muted">Pick up where you left off.</p>

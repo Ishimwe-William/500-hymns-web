@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { filterHymns, getCategories, type HymnSummary } from "@/lib/hymns";
+import { filterHymns, type HymnSummary } from "@/lib/hymns";
 import { useFavorites } from "@/lib/client-store";
 import { HymnList } from "@/components/hymn-list";
 import {
@@ -28,7 +28,9 @@ function HymnCard({ hymn }: { hymn: HymnSummary }) {
           <h3 className="mt-1 truncate text-[15px] font-semibold text-foreground">
             {hymn.title}
           </h3>
-          <p className="mt-0.5 text-[13px] text-muted">{hymn.category}</p>
+          {hymn.origin && (
+            <p className="mt-0.5 text-[13px] text-muted">{hymn.origin}</p>
+          )}
         </Link>
         <button
           type="button"
@@ -58,27 +60,19 @@ function HymnCard({ hymn }: { hymn: HymnSummary }) {
 
 export function HymnBrowser({
   hymns,
-  initialCategory,
   initialQuery = "",
 }: {
   hymns: HymnSummary[];
-  initialCategory?: string;
   initialQuery?: string;
 }) {
-  const [category, setCategory] = useState(initialCategory ?? "All categories");
   const [sort, setSort] = useState("number");
   const [query, setQuery] = useState(initialQuery);
   const [view, setView] = useState<"list" | "grid">("list");
   const [page, setPage] = useState(1);
 
-  const categories = useMemo(
-    () => ["All categories", ...getCategories(hymns)],
-    [hymns]
-  );
-
   const filtered = useMemo(
-    () => filterHymns(hymns, { category, sort, query }),
-    [hymns, category, sort, query]
+    () => filterHymns(hymns, { sort, query }),
+    [hymns, sort, query]
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -92,39 +86,19 @@ export function HymnBrowser({
 
   const reset = () => setPage(1);
 
+  if (hymns.length === 0) return (
+    <div className="rounded-2xl border border-border bg-card p-8 text-center">
+      <p className="font-medium text-foreground">No hymns are available right now</p>
+      <p className="mt-2 text-sm text-muted">Please try again shortly.</p>
+      <button type="button" onClick={() => window.location.reload()} className="mt-4 rounded-full bg-accent-strong px-5 py-2 text-sm font-medium text-white dark:text-black">Try again</button>
+    </div>
+  );
+
+
   return (
     <div className="space-y-5">
-      {/* Search field */}
-      <div className="flex items-center gap-3 rounded-2xl border border-border bg-card px-5 py-4">
-        <IconSearch width={20} height={20} className="shrink-0 text-muted" />
-        <input
-          value={query}
-          onChange={(e) => {
-            setQuery(e.target.value);
-            reset();
-          }}
-          placeholder="Search by hymn number, title, or lyrics…"
-          className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted"
-        />
-      </div>
-
       {/* Browse controls */}
       <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={category}
-          onChange={(e) => {
-            setCategory(e.target.value);
-            reset();
-          }}
-          aria-label="Category"
-          className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none"
-        >
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c === "All categories" ? "All categories" : c}
-            </option>
-          ))}
-        </select>
         <select
           value={sort}
           onChange={(e) => {
@@ -136,20 +110,7 @@ export function HymnBrowser({
         >
           <option value="number">Hymn number</option>
           <option value="title">Title A–Z</option>
-          <option value="category">Category</option>
         </select>
-        {category !== "All categories" && (
-          <button
-            type="button"
-            onClick={() => {
-              setCategory("All categories");
-              reset();
-            }}
-            className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-medium text-accent-ink dark:text-accent-ink"
-          >
-            {category} ✕
-          </button>
-        )}
         <div className="ml-auto flex rounded-xl border border-border bg-card p-1">
           <button
             type="button"
@@ -186,7 +147,6 @@ export function HymnBrowser({
                 type="button"
                 onClick={() => {
                   setQuery("");
-                  setCategory("All categories");
                   reset();
                 }}
                 className="mt-3 rounded-full bg-accent-strong px-4 py-2 text-sm font-medium text-white dark:text-black"

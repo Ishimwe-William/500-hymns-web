@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
-import { getHymnById, getHymns } from "@/lib/hymns-server";
-import { getCategories } from "@/lib/hymns";
+import { getHymnById } from "@/lib/hymns-server";
 import { HymnEditor } from "@/components/hymn-editor";
 
 export const metadata: Metadata = { title: "Edit hymn" };
@@ -13,9 +12,9 @@ async function EditHymnContent({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [hymn, all] = await Promise.all([getHymnById(id), getHymns()]);
+  const hymn = await getHymnById(id);
   if (!hymn) notFound();
-  return <HymnEditor hymn={hymn} categories={getCategories(all)} />;
+  return <HymnEditor hymn={hymn} />;
 }
 
 export default function EditHymnPage({

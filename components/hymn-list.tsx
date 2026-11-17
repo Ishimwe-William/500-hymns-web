@@ -66,7 +66,7 @@ export function HymnRow({
             <HighlightedText text={hymn.title} query={highlight} />
           </span>
           <span className="mt-0.5 block text-[13px] text-muted">
-            {hymn.category}
+            {hymn.origin && <HighlightedText text={hymn.origin} query={highlight} />}
             {excerpt && (
               <span className="ml-2 inline text-muted/80">
                 — <HighlightedText text={excerpt} query={highlight} />

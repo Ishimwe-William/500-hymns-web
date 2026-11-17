@@ -1,111 +1,67 @@
+import { DOWNLOAD_APP_URL } from "@/lib/links";
+import { matura } from "@/lib/fonts";
+import type { Metadata } from "next";
 import Link from "next/link";
-import { IconDownload, IconLogo } from "@/components/icons";
+import { SectionPage } from "@/components/section-page";
+import { IconBook, IconDownload, IconHeart, IconLogo, IconSearch } from "@/components/icons";
+import { version } from "@/package.json";
 
-const MOBILE_APP_URL = process.env.NEXT_PUBLIC_MOBILE_APP_URL ?? "#";
+export const metadata: Metadata = { title: "About | Indirimbo zo Guhimbaza Imana" };
+const features = [
+  { title: "A collection to treasure", description: "Browse five hundred Kinyarwanda hymns, bringing traditional and contemporary Christian music into one digital hymnbook.", icon: IconBook },
+  { title: "Find the words you know", description: "Search by hymn number, title, original title, or a phrase from the lyrics.", icon: IconSearch },
+  { title: "Keep your favorites close", description: "Save hymns for quick access, revisit recent readings, and choose the text size and theme that suit you.", icon: IconHeart },
+];
 
 export default function AboutPage() {
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
-      <header className="flex flex-col items-center gap-4 pt-6 text-center">
-        <IconLogo width={64} height={64} />
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">
-            500 Kinyarwanda Hymns
-          </h2>
-          <p className="mt-2 max-w-md text-muted">
-            A digital hymnbook carrying five hundred Kinyarwanda hymns — for
-            worship at home, in church, and everywhere in between.
-          </p>
+    <SectionPage title="About" header={
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
+          <IconLogo width={72} height={72} />
+          <h2 className={`${matura.className} text-center text-2xl leading-snug text-foreground sm:text-3xl`}>Indirimbo Zo<br />Guhimbaza Imana</h2>
         </div>
-      </header>
-
-      <section className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          About the hymnbook
-        </h3>
-        <p className="mt-3 text-[15px] leading-relaxed text-foreground">
-          This collection gathers beloved Kinyarwanda hymns into one calm,
-          readable digital hymnbook. Sing along with lyric text sized for
-          worship, chords when you want them, and audio when a recording is
-          available.
-        </p>
-      </section>
-
-      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-accent/30 bg-accent-soft/50 p-6 dark:bg-accent-soft/20">
-        <div>
-          <h3 className="text-base font-semibold text-foreground">
-            Take it with you
-          </h3>
-          <p className="mt-1 text-sm text-muted">
-            Download the mobile app for offline singing anywhere.
-          </p>
+        <div className="mx-auto max-w-xl text-center lg:mx-0 lg:max-w-md lg:text-left">
+          <p className="text-sm font-medium text-accent-strong dark:text-accent">Worship. Devotion. Community.</p>
+          <p className="mt-2 text-[15px] leading-7 text-muted">A digital hymnbook that makes sacred music easy to find, read, and share, wherever you gather to sing.</p>
         </div>
-        <a
-          href={MOBILE_APP_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-center gap-2 rounded-full bg-accent-strong px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:scale-[1.02] dark:text-black"
-        >
-          <IconDownload width={17} height={17} />
-          Download mobile app
-        </a>
-      </section>
-
-      <section className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          Main features
-        </h3>
-        <ul className="mt-3 list-disc space-y-1.5 pl-5 text-[15px] text-foreground">
-          <li>Browse all 500 hymns by number or category</li>
-          <li>Search titles, numbers, and lyrics</li>
-          <li>Reading settings: text size, chords, verse numbers, dark mode</li>
-          <li>Favorites and recently opened hymns</li>
-          <li>Audio playback where recordings exist</li>
-        </ul>
-      </section>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <section className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Developer
-          </h3>
-          <p className="mt-3 text-[15px] text-foreground">BunsenPlus</p>
-        </section>
-        <section className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Contact
-          </h3>
-          <p className="mt-3 text-[15px] text-foreground">
-            <a
-              href="mailto:hello@bunsenplus.dev"
-              className="text-accent-strong hover:underline dark:text-accent"
-            >
-              hello@bunsenplus.dev
-            </a>
-          </p>
-        </section>
-        <section className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Privacy policy
-          </h3>
-          <p className="mt-3 text-[15px] text-foreground">
-            Your favorites and preferences stay on your device unless you sign
-            in to sync them.{" "}
-            <Link
-              href="/profile"
-              className="text-accent-strong hover:underline dark:text-accent"
-            >
-              Learn more
-            </Link>
-          </p>
-        </section>
-        <section className="rounded-2xl border border-border bg-card p-6">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-            Version
-          </h3>
-          <p className="mt-3 text-[15px] text-foreground">Web 0.1.0</p>
-        </section>
       </div>
-    </div>
+    } sections={[
+      { id: "mission", title: "Our purpose", content: <>
+        <p>Hymns Collection brings together traditional and contemporary Christian hymns. Our mission is to provide easy access to sacred music for worship, personal devotion, and community singing.</p>
+        <p>By making these hymns available in digital format, the project aims to preserve and promote Rwandan spiritual music heritage for everyday use.</p>
+      </> },
+      { id: "features", title: "Features", content: <div className="divide-y divide-border">
+        {features.map((feature) => (
+          <div key={feature.title} className="flex gap-4 py-4 first:pt-0 last:pb-0">
+            <span className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent-soft text-accent-ink"><feature.icon width={21} height={21} /></span>
+            <div>
+              <h4 className="text-[15px] font-semibold text-foreground">{feature.title}</h4>
+              <p className="mt-1">{feature.description}</p>
+            </div>
+          </div>
+        ))}
+      </div> },
+      { id: "background", title: "Project background", content: <p>This application began as a hobby project to practice React Native development. It has grown into an accessible hymnbook for worship and devotion, including this experience in your browser.</p> },
+      { id: "mobile-app", title: "Take the hymnbook with you", content: <>
+        <p>The mobile app offers offline access, so the words stay close even without an internet connection.</p>
+        {DOWNLOAD_APP_URL && <Link href={DOWNLOAD_APP_URL} className="inline-flex items-center gap-2 rounded-full bg-accent-strong px-5 py-2.5 text-sm font-semibold text-white dark:text-black"><IconDownload width={17} height={17} />Download the app</Link>}
+      </> },
+      { id: "contact", title: "Connect with BunsenPlus", content: <>
+        <p>Share feedback, follow the project, or get in touch.</p>
+        <div className="flex flex-wrap gap-2">
+          {[
+            { label: "GitHub", href: "https://github.com/Ishimwe-William" },
+            { label: "LinkedIn", href: "https://www.linkedin.com/in/ishimwe-william-086776192/" },
+            { label: "Email", href: "mailto:bunsenplus.org@gmail.com" },
+          ].map((link) => <a key={link.label} href={link.href} target={link.href.startsWith("https:") ? "_blank" : undefined} rel="noreferrer" className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent-soft">{link.label}</a>)}
+        </div>
+      </> },
+      { id: "privacy", title: "Privacy", content: <>
+        <p>Learn how the app handles your information and how to manage your data.</p>
+        <Link href="/privacy" className="inline-block font-medium text-accent-strong hover:underline dark:text-accent">Read the privacy policy</Link>
+      </> },
+      { id: "version", title: "App version", content: <p>BunsenPlus <span className="mx-2" aria-hidden="true">/</span> Version {version}</p> },
+    ]} />
   );
 }

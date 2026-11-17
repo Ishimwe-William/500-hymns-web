@@ -23,24 +23,13 @@ export default function FavoritesPage({ hymns }: { hymns: HymnSummary[] }) {
   );
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <header className="space-y-1">
         <h2 className="text-3xl font-bold text-foreground">Your favorites</h2>
         <p className="text-muted">The hymns you keep close.</p>
       </header>
 
-      {/* Guest sync banner */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-accent/30 bg-accent-soft/60 px-5 py-4 dark:bg-accent-soft/20">
-        <p className="text-sm text-foreground">
-          Sign in to sync your favorites across devices.
-        </p>
-        <Link
-          href="/profile"
-          className="rounded-full bg-accent-strong px-4 py-2 text-sm font-medium text-white dark:text-black"
-        >
-          Sign in
-        </Link>
-      </div>
+      <p className="text-sm text-muted">Favorites are saved on this device. No sign-in is required.</p>
 
       {favHymns.length > 0 && (
         <div className="flex items-center justify-between gap-3">

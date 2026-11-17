@@ -5,11 +5,15 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+
+import { playableQueue, queueNeighbors, type PlayerHymn } from "@/lib/player-queue";
+export type { PlayerHymn } from "@/lib/player-queue";
 
 /* ---------------- localStorage-backed store ---------------- */
 
@@ -154,13 +158,11 @@ const EMPTY_SETTINGS: Record<string, never> = {};
 
 export interface ReadingSettings {
   fontSize: number; // 18 | 22 | 26
-  showChords: boolean;
   showVerseNumbers: boolean;
 }
 
 export const DEFAULT_SETTINGS: ReadingSettings = {
   fontSize: 22,
-  showChords: false,
   showVerseNumbers: true,
 };
 
@@ -252,13 +254,6 @@ export type PlayerStatus =
   | "paused"
   | "unavailable";
 
-export interface PlayerHymn {
-  id: string;
-  number: number;
-  title: string;
-  audioUrl?: string;
-}
-
 export interface PlayerState {
   hymn: PlayerHymn | null;
   status: PlayerStatus;
@@ -267,6 +262,10 @@ export interface PlayerState {
 }
 
 interface PlayerContextValue extends PlayerState {
+  previous: PlayerHymn | null;
+  next: PlayerHymn | null;
+  playPrevious: () => void;
+  playNext: () => void;
   play: (hymn: PlayerHymn, duration?: number) => void;
   pause: () => void;
   resume: () => void;
@@ -276,13 +275,15 @@ interface PlayerContextValue extends PlayerState {
 
 const PlayerContext = createContext<PlayerContextValue | null>(null);
 
-export function PlayerProvider({ children }: { children: ReactNode }) {
+export function PlayerProvider({ children, tracks }: { children: ReactNode; tracks: PlayerHymn[] }) {
+  const queue = useMemo(() => playableQueue(tracks), [tracks]);
   const [state, setState] = useState<PlayerState>({
     hymn: null,
     status: "idle",
     position: 0,
     duration: 0,
   });
+  const { previous, next } = useMemo(() => queueNeighbors(queue, state.hymn?.id ?? null), [queue, state.hymn?.id]);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const teardownAudio = useCallback(() => {
@@ -311,51 +312,49 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
         audioRef.current = el;
         el.addEventListener("loadedmetadata", () => {
           setState((prev) =>
-            prev.hymn?.id === hymn.id && prev.duration !== el.duration
+            audioRef.current === el && prev.hymn?.id === hymn.id && prev.duration !== el.duration
               ? { ...prev, duration: el.duration || prev.duration }
               : prev
           );
         });
         el.addEventListener("timeupdate", () => {
           setState((prev) =>
-            prev.hymn?.id === hymn.id ? { ...prev, position: el.currentTime } : prev
+            audioRef.current === el && prev.hymn?.id === hymn.id ? { ...prev, position: el.currentTime } : prev
           );
         });
         el.addEventListener("ended", () => {
           setState((prev) =>
-            prev.hymn?.id === hymn.id
+            audioRef.current === el && prev.hymn?.id === hymn.id
               ? { ...prev, status: "paused", position: 0 }
               : prev
           );
         });
         el.addEventListener("error", () => {
           setState((prev) =>
-            prev.hymn?.id === hymn.id ? { ...prev, status: "unavailable" } : prev
+            audioRef.current === el && prev.hymn?.id === hymn.id ? { ...prev, status: "unavailable" } : prev
           );
         });
         el.play()
           .then(() =>
             setState((prev) =>
-              prev.hymn?.id === hymn.id ? { ...prev, status: "playing" } : prev
+              audioRef.current === el && prev.hymn?.id === hymn.id ? { ...prev, status: "playing" } : prev
             )
           )
           .catch(() =>
             setState((prev) =>
-              prev.hymn?.id === hymn.id ? { ...prev, status: "unavailable" } : prev
+              audioRef.current === el && prev.hymn?.id === hymn.id ? { ...prev, status: "unavailable" } : prev
             )
           );
         return;
       }
 
-      // No audio source — simulate playback so the UI flow still works.
-      window.setTimeout(() => {
-        setState((prev) =>
-          prev.hymn?.id === hymn.id ? { ...prev, status: "playing" } : prev
-        );
-      }, 900);
+      setState({ hymn, status: "unavailable", position: 0, duration: 0 });
     },
     [teardownAudio]
   );
+
+  const playPrevious = useCallback(() => { if (previous) play(previous); }, [previous, play]);
+  const playNext = useCallback(() => { if (next) play(next); }, [next, play]);
 
   const pause = useCallback(() => {
     audioRef.current?.pause();
@@ -376,7 +375,7 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       return;
     }
     setState((prev) =>
-      prev.status === "paused" ? { ...prev, status: "playing" } : prev
+      prev.hymn ? { ...prev, status: "unavailable" } : prev
     );
   }, []);
 
@@ -394,28 +393,12 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  // Simulated playback position for hymns without an audio source.
-  useEffect(() => {
-    if (state.status !== "playing" || state.hymn?.audioUrl) return;
-    const t = window.setInterval(() => {
-      setState((prev) => {
-        if (prev.status !== "playing") return prev;
-        const next = prev.position + 1;
-        if (next >= prev.duration) {
-          return { ...prev, position: prev.duration, status: "paused" };
-        }
-        return { ...prev, position: next };
-      });
-    }, 1000);
-    return () => window.clearInterval(t);
-  }, [state.status, state.hymn?.audioUrl]);
-
   // Clean up audio element on unmount.
   useEffect(() => teardownAudio, [teardownAudio]);
 
   return (
     <PlayerContext.Provider
-      value={{ ...state, play, pause, resume, stop, seek }}
+      value={{ ...state, previous, next, playPrevious, playNext, play, pause, resume, stop, seek }}
     >
       {children}
     </PlayerContext.Provider>

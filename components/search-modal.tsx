@@ -21,13 +21,11 @@ export function SearchModal({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const results = useMemo(
-    () =>
-      query.trim()
-        ? searchHymns(hymns, query).slice(0, MAX_RESULTS)
-        : [],
-    [hymns, query]
-  );
+  const [expandedQuery, setExpandedQuery] = useState<string | null>(null);
+  const matches = useMemo(() => query.trim() ? searchHymns(hymns, query) : [], [hymns, query]);
+  const expanded = expandedQuery === query.trim();
+  const results = expanded ? matches : matches.slice(0, MAX_RESULTS);
+  const resultsRef = useRef<HTMLDivElement>(null);
 
   // Selection is tracked by hymn id so it survives query changes.
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -42,11 +40,6 @@ export function SearchModal({
   const openHymn = (id: string) => {
     onClose();
     router.push(`/hymns/${id}`);
-  };
-
-  const viewAll = () => {
-    onClose();
-    router.push(query.trim() ? `/search?q=${encodeURIComponent(query.trim())}` : "/search");
   };
 
   useEffect(() => {
@@ -68,15 +61,19 @@ export function SearchModal({
         return;
       }
       if (e.key === "Enter") {
+        if (e.target instanceof HTMLButtonElement) return;
         e.preventDefault();
         if (selected) openHymn(selected.id);
-        else viewAll();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [results, selected, query, onClose, router]);
+
+  useEffect(() => {
+    resultsRef.current?.querySelector('[data-selected="true"]')?.scrollIntoView({ block: "nearest" });
+  }, [selected?.id]);
 
   return (
     <div className="fixed inset-0 z-[90]" role="dialog" aria-modal="true" aria-label="Search hymns">
@@ -94,7 +91,7 @@ export function SearchModal({
             ref={inputRef}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Search by hymn number, title, or lyrics…"
+            placeholder="Search by hymn number, title, origin, or lyrics…"
             className="w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted"
           />
           <kbd className="hidden shrink-0 rounded-md border border-border px-1.5 py-0.5 text-[11px] font-medium text-muted sm:block">
@@ -103,7 +100,7 @@ export function SearchModal({
         </div>
 
         {/* Results */}
-        <div className="max-h-[50vh] overflow-y-auto p-2">
+        <div ref={resultsRef} className="max-h-[50vh] overflow-y-auto p-2">
           {query.trim() && results.length === 0 && (
             <p className="px-4 py-8 text-center text-sm text-muted">
               No hymns found for “{query}”
@@ -122,6 +119,7 @@ export function SearchModal({
                 type="button"
                 onClick={() => openHymn(h.id)}
                 onMouseEnter={() => setSelectedId(h.id)}
+                data-selected={isSelected}
                 className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                   isSelected ? "bg-accent-soft" : "hover:bg-accent-soft/60"
                 }`}
@@ -134,7 +132,7 @@ export function SearchModal({
                     {h.title}
                   </span>
                   <span className="block truncate text-xs text-muted">
-                    {h.category}
+                    {h.origin}
                     {h.hasAudio ? " · Audio" : ""}
                   </span>
                 </span>
@@ -143,15 +141,16 @@ export function SearchModal({
           })}
         </div>
 
-        {/* Footer */}
-        <button
-          type="button"
-          onClick={viewAll}
-          className="flex w-full items-center justify-between border-t border-border px-5 py-3 text-xs text-muted transition-colors hover:bg-accent-soft/50"
-        >
-          <span>View all results</span>
-          <span>Enter ↵</span>
-        </button>
+        {/* Expanding results keeps search on the current page. */}
+        {matches.length > results.length ? (
+          <button type="button" onClick={() => setExpandedQuery(query.trim())} className="flex w-full items-center justify-between border-t border-border px-5 py-3 text-xs text-muted hover:bg-accent-soft/50">
+            <span>View all {matches.length} results</span>
+            <span>{results.length} shown</span>
+          </button>
+        ) : query.trim() ? (
+          <p className="border-t border-border px-5 py-3 text-xs text-muted">{matches.length} hymn{matches.length === 1 ? "" : "s"} found</p>
+        ) : null}
+
       </div>
     </div>
   );

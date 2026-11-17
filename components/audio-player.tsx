@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePlayer } from "@/lib/client-store";
 import {
   IconClose,
-  IconMusic,
   IconPause,
   IconPlay,
   IconSkipBack,
@@ -28,6 +28,10 @@ export function AudioPlayer() {
     resume,
     stop,
     seek,
+    previous,
+    next,
+    playPrevious,
+    playNext,
   } = usePlayer();
 
   if (!hymn || status === "idle") return null;
@@ -42,12 +46,13 @@ export function AudioPlayer() {
   const progress = duration > 0 ? (position / duration) * 100 : 0;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-player">
+    <div role="region" aria-label="Audio player" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-player">
       <div className="flex h-20 items-center gap-4 px-4 sm:px-6 lg:px-10">
         {/* Left: track info */}
         <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-accent-soft text-accent-ink dark:text-accent-ink">
-            <IconMusic width={18} height={18} />
+          <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg">
+            <Image src="/brand/artwork-light.png" alt="" width={40} height={40} className="dark:hidden" />
+            <Image src="/brand/artwork-dark.png" alt="" width={40} height={40} className="hidden dark:block" />
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-medium text-foreground">
@@ -68,7 +73,10 @@ export function AudioPlayer() {
             <button
               type="button"
               aria-label="Previous hymn"
-              className="text-muted transition-colors hover:text-foreground"
+              onClick={playPrevious}
+              disabled={!previous}
+              title={previous ? `Play hymn ${previous.number}: ${previous.title}` : "No previous recording"}
+              className="text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
             >
               <IconSkipBack width={20} height={20} />
             </button>
@@ -88,7 +96,10 @@ export function AudioPlayer() {
             <button
               type="button"
               aria-label="Next hymn"
-              className="text-muted transition-colors hover:text-foreground"
+              onClick={playNext}
+              disabled={!next}
+              title={next ? `Play hymn ${next.number}: ${next.title}` : "No next recording"}
+              className="text-muted transition-colors hover:text-foreground disabled:cursor-not-allowed disabled:opacity-30"
             >
               <IconSkipForward width={20} height={20} />
             </button>

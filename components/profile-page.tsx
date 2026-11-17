@@ -1,39 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useFavorites, useLocalStorage, useRecent } from "@/lib/client-store";
-import { IconLogo } from "@/components/icons";
-
-const AUTH_KEY = "hymns:signedIn";
+import Image from "next/image";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-store";
+import { SectionPage } from "@/components/section-page";
 
 export default function ProfilePage() {
-  const [signedInRaw, setSignedIn] = useLocalStorage<boolean>(AUTH_KEY, false);
-  const signedIn = Boolean(signedInRaw);
-  const { ids } = useFavorites();
-  const { entries } = useRecent();
+  const { user, loading, checkingRole, isAdmin, busy, error, roleError, configured, signIn, signOut } = useAuth();
+  const router = useRouter();
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
+  const handleSignIn = async () => {
+    if (await signIn()) router.replace("/hymns");
+  };
+  const handleSignOut = async () => {
+    if (await signOut()) router.replace("/hymns");
+  };
 
-  const signIn = () => setSignedIn(true);
-  const signOut = () => setSignedIn(false);
+  const privacySection = {
+    id: "privacy",
+    title: "Privacy and data",
+    content: <>
+      <p>Favorites and reading preferences are saved on this device. For questions about your account or to request data deletion, contact BunsenPlus.</p>
+      <a href="mailto:bunsenplus.org@gmail.com" className="inline-block break-all font-medium text-accent-strong hover:underline dark:text-accent">bunsenplus.org@gmail.com</a>
+      <div><Link href="/privacy#deletion" className="font-medium text-accent-strong hover:underline dark:text-accent">Privacy and deletion information</Link></div>
+    </>,
+  };
 
-  if (!signedIn) {
-    return (
-      <div className="flex justify-center px-4 py-10">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-10 text-center">
-          <div className="flex justify-center">
-            <IconLogo width={56} height={56} />
-          </div>
-          <h2 className="mt-5 text-2xl font-bold text-foreground">
-            Take your hymnbook with you
-          </h2>
-          <p className="mt-2 text-sm leading-relaxed text-muted">
-            Sign in to sync your favorites, reading preferences, and recently
-            opened hymns across all your devices.
-          </p>
-          <button
-            type="button"
-            onClick={signIn}
-            className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-accent-strong px-4 py-3 text-sm font-semibold text-white transition-transform hover:scale-[1.01] dark:text-black"
-          >
+  if (loading) return <SectionPage title="Profile" description="Your Google account and permissions." sections={[
+    { id: "account", title: "Your account", content: <p role="status">Loading your account...</p> },
+  ]} />;
+
+  if (!user) return <SectionPage title="Profile" description="Sign in when you need access to your account." sections={[
+    { id: "sign-in", title: "Sign in with Google", content: <>
+      <p>Everyone can browse and read hymns without signing in. Google sign-in gives approved administrators access to hymn editing.</p>
+      <button type="button" onClick={handleSignIn} disabled={busy || !configured} className="inline-flex items-center justify-center gap-2 rounded-full bg-accent-strong px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60 dark:text-black">
             <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden>
               <path
                 fill="#4285F4"
@@ -52,106 +54,57 @@ export default function ProfilePage() {
                 d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"
               />
             </svg>
-            Continue with Google
-          </button>
-          <Link
-            href="/hymns"
-            className="mt-4 block text-sm font-medium text-accent-strong hover:underline dark:text-accent"
-          >
-            Continue browsing
-          </Link>
-          <Link
-            href="/about"
-            className="mt-6 block text-xs text-muted hover:text-foreground"
-          >
-            Privacy policy
-          </Link>
-        </div>
+        {busy ? "Signing in..." : "Continue with Google"}
+      </button>
+      {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+      {!configured && <p role="status" className="text-sm">Sign-in is not available yet. Please try again later.</p>}
+      <div><Link href="/hymns" className="font-medium text-accent-strong hover:underline dark:text-accent">Continue browsing hymns</Link></div>
+    </> },
+    privacySection,
+  ]} />;
+
+  return <SectionPage title="Profile" header={
+    <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+      <div className="min-w-0">
+        <h2 className="text-3xl font-bold tracking-tight text-foreground">Profile</h2>
+        <p className="mt-3 text-[15px] leading-relaxed text-muted">Your Google account and permissions.</p>
       </div>
-    );
-  }
-
-  return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <header className="space-y-1">
-        <h2 className="text-3xl font-bold text-foreground">Profile</h2>
-        <p className="text-muted">Your account and synced data.</p>
-      </header>
-
-      {/* Account card */}
-      <div className="flex items-center gap-4 rounded-2xl border border-border bg-card p-6">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-accent-soft text-xl font-bold text-accent-ink dark:text-accent-ink">
-          G
-        </span>
+      <div className="flex min-w-0 items-center gap-4 border-t border-border pt-6 md:max-w-[60%] md:border-l md:border-t-0 md:pl-6 md:pt-0">
+        {user.photoURL && failedPhotoUrl !== user.photoURL ? (
+          <Image src={user.photoURL} alt="Google profile photo" width={64} height={64} unoptimized referrerPolicy="no-referrer" onError={() => setFailedPhotoUrl(user.photoURL)} className="h-16 w-16 shrink-0 rounded-full object-cover" />
+        ) : (
+          <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-accent-soft text-2xl font-bold text-accent-ink">{(user.displayName ?? user.email ?? "U").slice(0, 1).toUpperCase()}</span>
+        )}
         <div className="min-w-0">
-          <p className="truncate text-lg font-semibold text-foreground">
-            Guest User
-          </p>
-          <p className="truncate text-sm text-muted">user@gmail.com</p>
-          <span className="mt-1 inline-block rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-medium text-accent-ink dark:text-accent-ink">
-            Signed in
-          </span>
-        </div>
-      </div>
-
-      {/* Sync info */}
-      <div className="rounded-2xl border border-border bg-card p-6">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-muted">
-          Sync information
-        </h3>
-        <dl className="mt-3 space-y-2 text-sm">
-          <div className="flex justify-between">
-            <dt className="text-muted">Favorites</dt>
-            <dd className="font-medium text-foreground">{ids.length}</dd>
+          <p className="break-words text-base font-semibold text-foreground">{user.displayName ?? "Hymnbook reader"}</p>
+          <p className="mt-1 break-all text-sm text-muted">{user.email ?? "No email available"}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-accent-soft px-3 py-1 text-xs font-medium text-accent-ink">{checkingRole ? "Checking permissions..." : roleError ? "Permissions unavailable" : isAdmin ? "Administrator" : "Reader"}</span>
+            {isAdmin && <Link href="/admin" className="rounded-full border border-border px-3 py-1 text-xs font-medium text-foreground hover:bg-accent-soft">Manage hymns</Link>}
           </div>
-          <div className="flex justify-between">
-            <dt className="text-muted">Recently opened</dt>
-            <dd className="font-medium text-foreground">{entries.length}</dd>
-          </div>
-          <div className="flex justify-between">
-            <dt className="text-muted">Last sync</dt>
-            <dd className="font-medium text-foreground">Just now</dd>
-          </div>
-        </dl>
-        <button
-          type="button"
-          className="mt-4 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft"
-        >
-          Sync now
-        </button>
-      </div>
-
-      <div className="space-y-3 rounded-2xl border border-border bg-card p-6">
-        <Link
-          href="/settings"
-          className="block text-sm font-medium text-accent-strong hover:underline dark:text-accent"
-        >
-          Manage settings
-        </Link>
-        <p className="text-xs leading-relaxed text-muted">
-          To delete your account and data, email{" "}
-          <span className="font-medium text-foreground">
-            privacy@bunsenplus.dev
-          </span>{" "}
-          from your signed-in address. We will remove your favorites, recents,
-          and preferences.
-        </p>
-        <Link
-          href="/about"
-          className="inline-block text-sm font-medium text-muted hover:text-foreground"
-        >
-          Request data deletion →
-        </Link>
-        <div className="pt-2">
-          <button
-            type="button"
-            onClick={signOut}
-            className="rounded-full border border-border px-5 py-2.5 text-sm font-medium text-foreground hover:bg-accent-soft"
-          >
-            Sign out
-          </button>
         </div>
       </div>
     </div>
-  );
+  } sections={[
+    { id: "account", title: "Your account", content: <>
+      <p>You are signed in with Google. Your account ID identifies your account across the hymnbook.</p>
+      <dl className="pt-3 text-sm">
+        <dt className="font-medium text-foreground">Account ID</dt>
+        <dd className="mt-1 break-all font-mono text-xs">{user.uid}</dd>
+      </dl>
+    </> },
+    { id: "permissions", title: "Account permissions", content: <>
+      <p>{isAdmin ? "Your account can manage and edit hymns." : "You can browse, search, read, and save hymns. Editing is reserved for approved administrators."}</p>
+      {roleError && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{roleError}</p>}
+    </> },
+    privacySection,
+    { id: "session", title: "Settings and sign-out", content: <>
+      <p>Choose your reading preferences or sign out of your Google account. You can continue browsing hymns after signing out.</p>
+      <div className="flex flex-wrap items-center gap-3">
+        <Link href="/settings" className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">Manage settings</Link>
+        <button type="button" onClick={handleSignOut} disabled={busy} className="rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft disabled:opacity-60">{busy ? "Signing out..." : "Sign out"}</button>
+      </div>
+      {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+    </> },
+  ]} />;
 }

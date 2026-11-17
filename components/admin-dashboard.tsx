@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import { SectionPage } from "@/components/section-page";
 import { useMemo, useState } from "react";
 import type { HymnSummary } from "@/lib/hymns";
-import { getCategories } from "@/lib/hymns";
 import { IconEdit, IconMusic, IconSearch } from "@/components/icons";
 
 const PAGE_SIZE = 15;
@@ -16,46 +16,28 @@ export default function AdminDashboard({
   audioCount: number;
 }) {
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState("All categories");
   const [page, setPage] = useState(1);
-
-  const categories = useMemo(
-    () => ["All categories", ...getCategories(hymns)],
-    [hymns]
-  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return hymns.filter((h) => {
-      if (category !== "All categories" && h.category !== category) return false;
       if (!q) return true;
-      return (
-        String(h.number).includes(q) ||
-        h.title.toLowerCase().includes(q) ||
-        h.category.toLowerCase().includes(q)
-      );
+      return String(h.number).includes(q) || h.title.toLowerCase().includes(q) || (h.origin ?? "").toLowerCase().includes(q);
     });
-  }, [hymns, query, category]);
+  }, [hymns, query]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const rows = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-1">
-        <h2 className="text-3xl font-bold text-foreground">Hymn management</h2>
-        <p className="text-muted">
-          Find and edit hymns in the collection.
-        </p>
-      </header>
-
+    <SectionPage title="Hymn management" description="Find and edit hymns in the collection." sections={[
+      { id: "overview", title: "Overview", content: <>
       {/* Summary cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[
           { label: "Total hymns", value: hymns.length },
           { label: "With audio", value: audioCount },
-          { label: "Categories", value: categories.length - 1 },
         ].map((s) => (
           <div
             key={s.label}
@@ -69,6 +51,8 @@ export default function AdminDashboard({
         ))}
       </div>
 
+      </> },
+      { id: "hymns", title: "Hymn collection", content: <div className="space-y-5">
       {/* Controls */}
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex min-w-56 flex-1 items-center gap-2 rounded-xl border border-border bg-card px-4 py-2.5">
@@ -83,21 +67,6 @@ export default function AdminDashboard({
             className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
           />
         </div>
-        <select
-          value={category}
-          onChange={(e) => {
-            setCategory(e.target.value);
-            setPage(1);
-          }}
-          aria-label="Filter by category"
-          className="rounded-xl border border-border bg-card px-4 py-2.5 text-sm text-foreground outline-none"
-        >
-          {categories.map((c) => (
-            <option key={c} value={c}>
-              {c}
-            </option>
-          ))}
-        </select>
       </div>
 
       {/* Table */}
@@ -107,9 +76,8 @@ export default function AdminDashboard({
             <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted">
               <th className="px-5 py-3 font-semibold">Number</th>
               <th className="px-5 py-3 font-semibold">Title</th>
-              <th className="px-5 py-3 font-semibold">Category</th>
+              <th className="px-5 py-3 font-semibold">Origin</th>
               <th className="px-5 py-3 font-semibold">Audio</th>
-              <th className="px-5 py-3 font-semibold">Last updated</th>
               <th className="px-5 py-3 text-right font-semibold">Action</th>
             </tr>
           </thead>
@@ -125,7 +93,7 @@ export default function AdminDashboard({
                 <td className="max-w-56 truncate px-5 py-3 text-foreground">
                   {h.title}
                 </td>
-                <td className="px-5 py-3 text-muted">{h.category}</td>
+                <td className="px-5 py-3 text-muted">{h.origin}</td>
                 <td className="px-5 py-3">
                   {h.hasAudio ? (
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-accent-ink dark:text-accent-ink">
@@ -135,7 +103,6 @@ export default function AdminDashboard({
                     <span className="text-xs text-muted">—</span>
                   )}
                 </td>
-                <td className="px-5 py-3 text-muted">2026-11-01</td>
                 <td className="px-5 py-3 text-right">
                   <Link
                     href={`/admin/hymns/${h.id}/edit`}
@@ -148,7 +115,7 @@ export default function AdminDashboard({
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-muted">
+                <td colSpan={5} className="px-5 py-10 text-center text-muted">
                   No hymns match your filters.
                 </td>
               </tr>
@@ -158,7 +125,7 @@ export default function AdminDashboard({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between text-sm text-muted">
+      <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-muted">
         <p>
           {filtered.length === 0
             ? "No results"
@@ -186,6 +153,7 @@ export default function AdminDashboard({
           </button>
         </div>
       </div>
-    </div>
+      </div> },
+    ]} />
   );
 }

@@ -1,6 +1,9 @@
 "use client";
 
+import { orderedSections } from "@/lib/hymn-sections";
+
 import Link from "next/link";
+import { useAuth } from "@/lib/auth-store";
 import { useEffect, useState } from "react";
 import { PresentationView } from "@/components/presentation-view";
 import type { Hymn } from "@/lib/hymns";
@@ -134,23 +137,6 @@ function ReadingSettings() {
         <label className="flex cursor-pointer items-center justify-between">
           <span>
             <span className="block text-sm font-medium text-foreground">
-              Show chords
-            </span>
-            <span className="block text-xs text-muted">
-              Display chord symbols above lyrics
-            </span>
-          </span>
-          <input
-            type="checkbox"
-            checked={settings.showChords}
-            onChange={(e) => update({ showChords: e.target.checked })}
-            className="h-5 w-5 accent-accent-strong"
-          />
-        </label>
-
-        <label className="flex cursor-pointer items-center justify-between">
-          <span>
-            <span className="block text-sm font-medium text-foreground">
               Show verse numbers
             </span>
             <span className="block text-xs text-muted">
@@ -196,10 +182,6 @@ function HymnInfoCard({ hymn }: { hymn: Hymn }) {
         About this hymn
       </h3>
       <dl className="mt-3 space-y-2 text-sm">
-        <div className="flex justify-between gap-3">
-          <dt className="text-muted">Category</dt>
-          <dd className="font-medium text-foreground">{hymn.category}</dd>
-        </div>
         {hymn.origin && (
           <div className="flex justify-between gap-3">
             <dt className="text-muted">Origin</dt>
@@ -244,42 +226,73 @@ export function HymnReader({
   prev: { id: string; number: number; title: string } | null;
   next: { id: string; number: number; title: string } | null;
 }) {
+  const { isAdmin } = useAuth();
   const { has, toggle } = useFavorites();
   const fav = has(hymn.id);
   const { settings } = useReadingSettings();
   const [presenting, setPresenting] = useState(false);
 
-  const chords = ["C", "G", "Am", "F", "C", "G", "F", "C"];
+  const startPresentation = () => {
+    setPresenting(true);
+    // Request directly from the click so the browser has user activation.
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      void document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {
+        // Keep the presentation available if fullscreen is unsupported or denied.
+      });
+    }
+  };
+
+  const closePresentation = () => {
+    setPresenting(false);
+    if (document.fullscreenElement === document.documentElement) {
+      void document.exitFullscreen().catch(() => {});
+    }
+  };
+
+
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="w-full space-y-6">
       <RecentRecorder hymnId={hymn.id} />
 
-      {/* Header */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2 text-sm text-muted">
-          <Link href="/hymns" className="hover:text-foreground">
-            Hymns
-          </Link>
+      {/* Reader toolbar */}
+      <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap">
+        <div className="flex shrink-0 items-center gap-2 text-sm text-muted">
+          <Link href="/hymns" className="hover:text-foreground">Hymns</Link>
           <span>/</span>
           <span className="text-foreground">Hymn {hymn.number}</span>
-          <Link
-            href="/hymns"
-            className="ml-3 inline-flex items-center gap-1 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted hover:bg-accent-soft hover:text-foreground"
-          >
-            <IconChevronLeft width={14} height={14} /> Back to library
+          <Link href="/hymns" aria-label="Back to library" title="Back to library" className="rounded-full border border-border bg-card p-2 hover:bg-accent-soft">
+            <IconChevronLeft width={14} height={14} />
           </Link>
         </div>
-        <div className="flex items-center gap-2">
+
+        <nav aria-label="Hymn navigation" className="flex shrink-0 items-center gap-2 lg:ml-auto">
+          {prev && (
+            <Link href={`/hymns/${prev.id}`} title={`${prev.number}. ${prev.title}`} aria-label={`Previous hymn: ${prev.number}. ${prev.title}`} className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
+              <IconChevronLeft width={16} height={16} />
+              Previous {prev.number}
+            </Link>
+          )}
+          <AudioButton hymn={hymn} />
+          {next && (
+            <Link href={`/hymns/${next.id}`} title={`${next.number}. ${next.title}`} aria-label={`Next hymn: ${next.number}. ${next.title}`} className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
+              Next {next.number}
+              <IconChevronRight width={16} height={16} />
+            </Link>
+          )}
+        </nav>
+
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
-            onClick={() => setPresenting(true)}
+            onClick={startPresentation}
             className="flex items-center gap-2 rounded-full bg-accent-strong px-4 py-2 text-sm font-medium text-white transition-transform hover:scale-[1.02] dark:text-black"
           >
             <IconPresent width={16} height={16} />
             Present
           </button>
           <ShareButton title={hymn.title} />
+          {isAdmin && <Link href={`/admin/hymns/${hymn.id}/edit`} className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">Edit</Link>}
           <button
             type="button"
             onClick={() => toggle(hymn.id)}
@@ -321,7 +334,7 @@ export function HymnReader({
           <hr className="my-8 border-border" />
 
           <div className="lyrics-body space-y-8 text-center text-foreground">
-            {hymn.sections.map((section, si) => (
+            {orderedSections(hymn.sections).map((section, si) => (
               <section
                 key={si}
                 className={
@@ -343,11 +356,6 @@ export function HymnReader({
                 )}
                 {section.lines.map((line, li) => (
                   <p key={li} className="relative">
-                    {settings.showChords && (
-                      <span className="mr-2 text-sm font-medium text-accent">
-                        [{chords[(si * 2 + li) % chords.length]}]
-                      </span>
-                    )}
                     {line}
                   </p>
                 ))}
@@ -355,9 +363,6 @@ export function HymnReader({
             ))}
           </div>
 
-          <div className="mt-10 flex justify-center">
-            <AudioButton hymn={hymn} />
-          </div>
         </article>
 
         {/* Right panel */}
@@ -367,40 +372,9 @@ export function HymnReader({
         </aside>
       </div>
 
-      {/* Prev / next */}
-      <nav className="flex items-center justify-between gap-3">
-        {prev ? (
-          <Link
-            href={`/hymns/${prev.id}`}
-            className="flex items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-accent-soft"
-          >
-            <IconChevronLeft width={18} height={18} />
-            <span className="text-left">
-              <span className="block text-xs text-muted">Previous hymn</span>
-              {prev.number}. {prev.title}
-            </span>
-          </Link>
-        ) : (
-          <span />
-        )}
-        {next ? (
-          <Link
-            href={`/hymns/${next.id}`}
-            className="flex items-center gap-2 rounded-2xl border border-border bg-card px-5 py-3 text-right text-sm font-medium text-foreground transition-colors hover:bg-accent-soft"
-          >
-            <span>
-              <span className="block text-xs text-muted">Next hymn</span>
-              {next.number}. {next.title}
-            </span>
-            <IconChevronRight width={18} height={18} />
-          </Link>
-        ) : (
-          <span />
-        )}
-      </nav>
 
       {presenting && (
-        <PresentationView hymn={hymn} onClose={() => setPresenting(false)} />
+        <PresentationView hymn={hymn} onClose={closePresentation} />
       )}
     </div>
   );

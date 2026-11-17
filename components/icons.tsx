@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { SVGProps } from "react";
 
 type P = SVGProps<SVGSVGElement>;
@@ -247,22 +248,20 @@ export const IconPresent = (p: P) => (
   </svg>
 );
 
-export const IconLogo = (p: P) => (
-  <svg viewBox="0 0 32 32" width={32} height={32} aria-hidden {...p}>
-    <rect width="32" height="32" rx="8" fill="#00AD95" />
-    <path
-      d="M9 22V10.5A1.5 1.5 0 0 1 10.5 9H20a4 4 0 0 1 0 8h-7.5"
-      stroke="#fff"
-      strokeWidth="2"
-      strokeLinecap="round"
-      fill="none"
-    />
-    <path
-      d="M13 22v-5.5A1.5 1.5 0 0 1 14.5 15H22a3.5 3.5 0 0 1 0 7h-6.5"
-      stroke="#fff"
-      strokeWidth="2"
-      strokeLinecap="round"
-      fill="none"
-    />
-  </svg>
+export const IconLogo = ({
+  width = 32,
+  height = 32,
+  className = "",
+}: {
+  width?: number;
+  height?: number;
+  className?: string;
+}) => (
+  <Image
+    src="/brand/logo.png"
+    alt=""
+    width={width}
+    height={height}
+    className={`shrink-0 rounded-full object-contain ${className}`}
+  />
 );
