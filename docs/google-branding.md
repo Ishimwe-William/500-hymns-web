@@ -1,5 +1,10 @@
 # Google sign-in branding
 
+The website now uses native Supabase Google OAuth. Configure the Google provider
+and callback URLs using [authentication setup](authentication.md). The Firebase
+custom authentication-domain instructions below apply only to the old Firebase
+login/mobile backend; they do not configure the current website's login flow.
+
 The Google-hosted account chooser and consent screen are controlled by Google Auth Platform and Firebase. Website titles, fonts, Firebase `initializeApp` names, and OAuth custom parameters cannot rename that screen.
 
 ## Set the app identity
