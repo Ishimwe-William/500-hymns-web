@@ -1,6 +1,7 @@
 import { APP_NAME, SITE_URL, SITE_DESCRIPTION, absoluteUrl, jsonLd, publicMetadata } from "@/lib/site";
 import { DEVELOPER_URL } from "@/lib/links";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { PwaRegistration } from "@/components/pwa-registration";
 import { Suspense, type ReactNode } from "react";
 import { Roboto } from "next/font/google";
 import { matura } from "@/lib/fonts";
@@ -19,12 +20,15 @@ export const metadata: Metadata = {
   ...publicMetadata(APP_NAME, SITE_DESCRIPTION, "/hymns"),
   metadataBase: new URL(SITE_URL),
   applicationName: APP_NAME,
+  appleWebApp: { capable: true, title: "Hymns", statusBarStyle: "default" },
   authors: [{ name: "BunsenPlus", url: DEVELOPER_URL }], creator: "BunsenPlus", publisher: "BunsenPlus", category: "Music",
   keywords: [APP_NAME, "500 Kinyarwanda Hymns", "Kinyarwanda hymn lyrics", "Indirimbo 500", "Rwandan Christian hymns", "Guhimbaza Imana", "hymnbook", "worship lyrics", "BunsenPlus"],
   robots: { index: true, follow: true, googleBot: { index: true, follow: true, "max-image-preview": "large", "max-snippet": -1, "max-video-preview": -1 } },
   formatDetection: { telephone: false },
   ...(process.env.GOOGLE_SITE_VERIFICATION ? { verification: { google: process.env.GOOGLE_SITE_VERIFICATION } } : {}),
 };
+
+export const viewport: Viewport = { themeColor: "#00ad95" };
 
 const themeScript = `(function(){try{var t=JSON.parse(localStorage.getItem("hymns:theme"));if(t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches)){document.documentElement.classList.add("dark")}}catch(e){}})();`;
 
@@ -46,6 +50,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         ] }) }} />
       </head>
       <body className="min-h-full bg-background font-sans text-foreground">
+        <PwaRegistration />
         <Suspense fallback={<div role="status" className="p-8 text-center text-muted">Loading hymnbook...</div>}>
           <HymnApp>{children}</HymnApp>
         </Suspense>

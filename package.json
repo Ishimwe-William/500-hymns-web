@@ -1,6 +1,6 @@
 {
   "name": "500-hymns-web",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "author": "Ishimwe William",
   "private": true,
   "scripts": {
@@ -8,17 +8,19 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "node --test tests/auth-session.test.cjs tests/hymn-sections.test.cjs tests/hymns-server.test.cjs tests/refresh-hymns.test.cjs tests/player-queue.test.cjs tests/site-metadata.test.cjs",
+    "test": "node --test tests/auth-session.test.cjs tests/hymn-sections.test.cjs tests/hymns-server.test.cjs tests/offline-worker.test.cjs tests/refresh-hymns.test.cjs tests/player-queue.test.cjs tests/site-metadata.test.cjs tests/export-hymns.test.cjs tests/native-auth-sql.test.cjs",
     "test:rules": "firebase emulators:exec --only firestore --project demo-hymns-web \"node --test tests/firestore.rules.test.cjs\"",
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
     "firebase": "^13.2.0",
     "next": "16.4.6",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16",
     "@firebase/rules-unit-testing": "^6.0.0",
     "@playwright/test": "^1.65.1",
     "@tailwindcss/turbopack": "4.3.3",

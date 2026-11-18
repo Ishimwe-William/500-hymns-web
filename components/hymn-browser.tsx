@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import { filterHymns, type HymnSummary } from "@/lib/hymns";
 import { useFavorites } from "@/lib/client-store";
 import { HymnList } from "@/components/hymn-list";
@@ -15,12 +15,42 @@ import {
 
 const PAGE_SIZE = 20;
 
+function subscribeConnection(update: () => void) {
+  window.addEventListener("online", update);
+  window.addEventListener("offline", update);
+  return () => {
+    window.removeEventListener("online", update);
+    window.removeEventListener("offline", update);
+  };
+}
+
+const CARD_PHOTOS = [
+  "photo-1470770841072-f978cf4d019e",
+  "photo-1464822759023-fed622ff2c3b",
+  "photo-1441974231531-c6227db76b6e",
+];
+
+function CardBackground({ number }: { number: number }) {
+  const online = useSyncExternalStore(subscribeConnection, () => navigator.onLine, () => false);
+  const [failed, setFailed] = useState(false);
+  if (!online || failed) return null;
+  return <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden rounded-2xl">
+    {/* Decorative remote photos are never part of the offline lyrics download. */}
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    <img src={`https://images.unsplash.com/${CARD_PHOTOS[number % CARD_PHOTOS.length]}?auto=format&fit=crop&w=640&q=65`}
+      alt="" loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setFailed(true)}
+      className="h-full w-full object-cover opacity-25 dark:opacity-30" />
+    <div className="absolute inset-0 bg-linear-to-r from-card via-card/85 to-card/30" />
+  </div>;
+}
+
 function HymnCard({ hymn }: { hymn: HymnSummary }) {
   const { has, toggle } = useFavorites();
   const fav = has(hymn.id);
   return (
-    <div className="flex flex-col rounded-2xl border border-border bg-card p-5 transition-shadow hover:shadow-md">
-      <div className="flex items-start justify-between gap-3">
+    <div className="relative isolate flex flex-col rounded-2xl border border-border bg-card p-5 transition-shadow hover:shadow-md">
+      <CardBackground number={hymn.number} />
+      <div className="relative flex items-start justify-between gap-3">
         <Link href={`/hymns/${hymn.id}`} className="min-w-0">
           <span className="text-xs font-semibold uppercase tracking-wide text-muted">
             Hymn {hymn.number}
@@ -41,7 +71,7 @@ function HymnCard({ hymn }: { hymn: HymnSummary }) {
           <IconHeart filled={fav} width={18} height={18} />
         </button>
       </div>
-      <div className="mt-auto flex items-center justify-between pt-4">
+      <div className="relative mt-auto flex items-center justify-between pt-4">
         {hymn.hasAudio ? (
           <IconMusic width={18} height={18} className="text-muted" />
         ) : (

@@ -6,6 +6,7 @@ import { DOWNLOAD_APP_URL } from "@/lib/links";
 import { useAuth } from "@/lib/auth-store";
 import { useReadingSettings, useTheme } from "@/lib/client-store";
 import { IconDownload } from "@/components/icons";
+import { OfflineDownload } from "@/components/offline-download";
 
 function Row({
   label,
@@ -128,7 +129,7 @@ export default function SettingsPage() {
         </Row>
       </div> },
       { id: "offline-storage", title: "Offline access", content: <>
-        <p>Audio downloads are not available on the website. An internet connection is required to load hymns and play audio.</p>
+        <OfflineDownload />
         <p>Your favorites, recent hymns, and reading preferences are saved on this device when browser storage is available.</p>
         <Link href={DOWNLOAD_APP_URL} className="inline-flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
           <IconDownload width={15} height={15} /> Get the mobile app for offline access

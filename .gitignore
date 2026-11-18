@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -42,13 +43,21 @@ next-env.d.ts
 /.idea/
 /.devin/
 
-.vercel
-
 # Local Firebase emulator logs
 firestore-debug.log
+firebase-debug.log
 
 # Browser test artifacts
 /test-results/
 /playwright-report/
 
 /.next-e2e/
+/.data/
+
+# Local agent configuration and Supabase CLI state
+/.agents/
+/.codex/
+/supabase/.temp/
+
+# Downloaded service-account credentials
+*-firebase-adminsdk-*.json

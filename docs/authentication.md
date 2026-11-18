@@ -1,50 +1,70 @@
-# Google sign-in and admin access
+# Google sign-in with Supabase
 
-The website uses Firebase Authentication and the same role records as the mobile app: `users/{firebaseUid}.role`. Only the exact string `admin` grants hymn editing. Missing profiles and other roles are readers. A cached role is not enough to unlock Admin; the app waits for a server-confirmed snapshot. Role changes are observed while signed in.
+The website uses native Supabase Auth for Google login. Firebase login and token
+custom claims are no longer needed by the website. The mobile app still uses
+its existing Firebase backend until separately migrated.
 
-## Firebase configuration
+## Setup
 
-Use the Firebase project already used by the mobile app. Set the `NEXT_PUBLIC_FIREBASE_*` values shown in `.env.example` in your local environment and hosting settings. No service-account key or Google client secret belongs in the browser.
+1. Set `NEXT_PUBLIC_SUPABASE_URL` and the public anonymous/publishable key from
+   `.env.example`, locally and in Vercel. Never expose a service-role key.
+2. Enable Google under Supabase Authentication > Sign In / Providers. Put the
+   web OAuth client ID first and save its client secret in Supabase only.
+3. Add the Supabase callback to the Google web OAuth client's authorized redirect
+   URIs: `https://apzlragcnmdbjwfjhwhh.supabase.co/auth/v1/callback`.
+4. In Supabase Authentication > URL Configuration, set Site URL to
+   `https://500-hymns.vercel.app` and allow these redirect URLs:
+   - `https://500-hymns.vercel.app/auth/callback`
+   - `http://localhost:3000/auth/callback`
+   - Any explicitly approved development/preview host's `/auth/callback`.
+5. For the existing database, run
+   `supabase/migrations/202611180002_native_google_auth.sql` in SQL Editor.
+   It preserves legacy records and configures automatic reader profiles for
+   both new and existing Supabase Auth users.
+6. Deploy the updated website. Sign in again using its Google button.
 
-In Firebase Console:
+The browser uses PKCE, with a callback that exchanges the authorization code in
+the same browser. Sessions persist and refresh through the Supabase SDK. The
+callback has no search indexing and does not accept an arbitrary return URL.
 
-1. Under Authentication > Sign-in method, enable Google and choose the support email.
-2. Under Authentication > Settings > Authorized domains, add the production hostname and `localhost` for development. Add only domains you control.
-3. Sign in on the website and copy the Account ID from Profile. This is the authenticated Firebase UID, not the email address or a local flag.
-4. With a trusted Firebase Console account, create or update `users/{thatUid}` with `role: "admin"`. Existing mobile admins already have this record and need no second role assignment. Never automatically make the first visitor an admin.
+## Administrator access
 
-## Database enforcement
+New accounts are readers. Name, email, and Google user metadata cannot grant
+admin permission. After identifying the intended user in Supabase Authentication
+or the website Profile page, run this template with their exact Supabase UUID:
 
-`firestore.rules` contains tested rules for public hymn reads, admin-only hymn writes, and private user profiles. Users can read their own role and admins can read all user records. All client writes to user records are denied, including writes by admins. Assign and manage roles through Firebase Console or another trusted backend. The rules also preserve owner-only access to userFavorites, userPreferences, and userRecent.
-
-The rules are prepared locally; changing application code does **not** deploy them. Review and merge these rules with your project's existing rules before deployment, especially rules for mobile favorites, preferences, and other collections. The supplied rules deny unspecified collections. Do not keep an overlapping rule that broadly allows writes: matching allow rules are additive.
-
-After reviewing the complete shared-project rules, deploy with:
-
-```sh
-firebase deploy --only firestore:rules --project YOUR_PROJECT_ID
+```sql
+update public.profiles
+set role = 'admin'
+where auth_user_id = 'REPLACE_WITH_SUPABASE_USER_UUID';
 ```
 
-Admin pages are also guarded in the UI, but Firestore rules are the authoritative protection against direct SDK or REST writes. The web editor records `updatedBy` (authenticated UID, email, display name) and `updatedAt` (server timestamp). This is last-edit attribution, not an immutable history. The mobile editor must supply equivalent fields if it needs the same attribution.
+Never execute the placeholder unchanged or promote every account. Do not use
+the old Firebase UID as the new Supabase account UUID.
 
-## Verification
+The website rechecks the protected profile role on session changes, periodically
+while signed in, and on focus. RLS checks every database write independently.
+Server cache invalidation remotely verifies the Supabase access token through
+the Auth API and rechecks the database role; it does not trust client role flags.
+Profile writes are denied to client apps. A trusted database trigger creates
+reader profiles. Hymn edits record the verified Supabase UUID and server time.
 
-```sh
-node --test tests/auth-session.test.cjs tests/hymn-sections.test.cjs
-firebase emulators:exec --only firestore --project demo-hymns-web "node --test tests/firestore.rules.test.cjs"
-npx next typegen
-npx tsc --noEmit
-npm run lint
-```
+## Existing Firebase users
 
-The emulator uses a demo project and does not access production data. For the live Google flow, verify a reader and an existing admin in the browser, then revoke the admin's role and confirm editing disappears. Check cancelled or blocked pop-ups and sign-out as well. Local-only favorites and reading preferences are not cloud-synced by this change.
+`profiles.firebase_uid` preserves the legacy Firebase identifier, while
+`profiles.auth_user_id` identifies a native Supabase account. No automatic email
+matching or privilege transfer occurs. Migrating private records and linking
+legacy accounts requires trusted source access and explicit identity verification.
+The website's favorites/preferences still remain local until cloud sync is
+implemented. Keep the original mobile backend intact.
 
-References: [Google sign-in](https://firebase.google.com/docs/auth/web/google-signin), [Firestore role checks](https://firebase.google.com/docs/firestore/security/rules-conditions).
+## Validation
 
-## Sign-in branding
+`npm test` includes embedded PostgreSQL tests for the migration, anonymous reads,
+owner profile visibility, blocked role escalation, reader write rejection,
+admin editing, issuer checks, and editor attribution. Run lint, TypeScript, build,
+and browser checks as well. A real Google account is still required to verify the
+complete provider consent flow and the live database migration.
 
-See [Google sign-in branding](google-branding.md) to display the real app name and configure a branded authentication domain.
-
-## Refreshing saved hymns
-
-After Firestore confirms an edit, the client sends its Firebase ID token to a Server Action. The server verifies the session with Firebase Authentication and reads the current admin role using the same token under Firestore rules. Only then does it immediately expire the shared hymn cache using `updateTag`, invalidate the shared layout, and refresh the reader, search, and admin lists. No service-account credentials are needed. If refreshing fails after a successful database write, the editor offers a separate refresh retry and does not claim that the write failed.
+References: [Google provider setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google),
+[PKCE callback](https://supabase.com/docs/reference/javascript/auth-exchangecodeforsession).

@@ -1,5 +1,12 @@
 import type { HymnSection } from "./hymns";
 
+/** Display labels are independent of the stored section numbering and labels. */
+export function sectionHeading(section: HymnSection): string {
+  if (section.type === "refrain") return "Refrain";
+  const labelNumber = section.label.match(/(?:verse|stanza)\s+(\d+)/i)?.[1];
+  return String(sectionNumber(section.number ?? labelNumber, 1));
+}
+
 /** Missing numbers get a fallback; zero is a valid position. */
 export function sectionNumber(value: unknown, fallback: number): number {
   if (typeof value !== "number" && typeof value !== "string") return fallback;

@@ -6,7 +6,7 @@ import { DOWNLOAD_APP_URL } from "@/lib/links";
 import { matura } from "@/lib/fonts";
 import Link from "next/link";
 import { AuthProvider, useAuth } from "@/lib/auth-store";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { FavoritesProvider, PlayerProvider, useTheme } from "@/lib/client-store";
 import { AudioPlayer } from "@/components/audio-player";
@@ -28,6 +28,8 @@ import {
   IconSun,
   IconUser,
   IconClose,
+  IconLogIn,
+  IconLogOut,
 } from "@/components/icons";
 
 
@@ -119,7 +121,8 @@ function Navbar({
   onMenu: () => void;
   hymns: HymnSummary[];
 }) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, loading, busy, configured, error, signIn, signOut } = useAuth();
+  const router = useRouter();
   const pathname = usePathname();
   const { theme, toggle } = useTheme();
   const [q, setQ] = useState("");
@@ -271,6 +274,22 @@ function Navbar({
                     <IconDownload width={16} height={16} className="text-muted" />
                     Download mobile app
                   </Link>
+                  <button
+                    type="button"
+                    disabled={loading || busy || !configured}
+                    onClick={async () => {
+                      const succeeded = user ? await signOut() : await signIn();
+                      if (succeeded) {
+                        setMenuOpen(false);
+                        router.replace("/hymns");
+                      }
+                    }}
+                    className="flex w-full items-center gap-2.5 border-t border-border px-4 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent-soft/60 disabled:cursor-wait disabled:opacity-50"
+                  >
+                    {user ? <IconLogOut width={16} height={16} className="text-muted" /> : <IconLogIn width={16} height={16} className="text-muted" />}
+                    {busy ? (user ? "Signing out..." : "Signing in...") : user ? "Sign out" : "Sign in with Google"}
+                  </button>
+                  {error && <p role="alert" className="px-4 py-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
                 </div>
               </>
             )}

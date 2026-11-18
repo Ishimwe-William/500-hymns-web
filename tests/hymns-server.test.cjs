@@ -1,76 +1,68 @@
-const { test } = require("node:test");
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const ts = require("typescript");
-function compile(path) {
-  return ts.transpileModule(fs.readFileSync(require.resolve(path), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
-}
-const sectionModule = { exports: {} };
-new Function("exports", "require", "module", compile("../lib/hymn-sections.ts"))(sectionModule.exports, require, sectionModule);
-function loader({ configured = true, docs = [], fail = false } = {}) {
-  const lifetimes = [];
-  let reads = 0, documentReads = 0;
-  const dependencies = {
-    "@/lib/cache-tags": { HYMNS_CACHE_TAG: "hymns" },
-    "next/cache": { cacheTag: () => {}, cacheLife: (profile) => lifetimes.push(profile) },
-    "next/navigation": { unstable_rethrow: (error) => { if (error?.internal) throw error; } },
-    "firebase/firestore/lite": { doc: (_db, _collection, id) => id, getDoc: async (id) => {
-      documentReads++; if (fail) throw fail === true ? new Error("Backend unavailable") : fail;
-      const found = docs.find((document) => document.id === id);
-      return found ? { ...found, exists: () => true } : { id, exists: () => false };
-    }, getFirestore: () => ({}), collection: () => "hymns", getDocs: async () => { reads++; if (fail) throw fail === true ? new Error("Backend unavailable") : fail; return { docs }; } },
-    "@/lib/firebase-app": { firebaseApp: configured ? {} : null, isFirebaseConfigured: configured },
-    "@/lib/hymns": { lyricsTextFor: (sections) => sections.flatMap((s) => s.lines).join("\n") },
-    "@/lib/hymn-sections": sectionModule.exports,
+const { test } = require('node:test');
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const ts = require('typescript');
+const compile = path => ts.transpileModule(fs.readFileSync(require.resolve(path), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
+const sections = { exports: {} };
+new Function('exports', 'require', 'module', compile('../lib/hymn-sections.ts'))(sections.exports, require, sections);
+function loader({ rows = [], error, batches } = {}) {
+  const calls = [], lifetimes = [];
+  const deps = {
+    '@/lib/cache-tags': { HYMNS_CACHE_TAG: 'hymns' },
+    '@/lib/hymn-sections': sections.exports,
+    '@/lib/hymns': { lyricsTextFor: sections => sections.flatMap(s => s.lines).join('\n') },
+    'next/cache': { cacheTag() {}, cacheLife: value => lifetimes.push(value) },
+    'next/navigation': { unstable_rethrow: e => { if (e.internal) throw e; } },
+    '@/lib/supabase': { supabaseRequest: async (path, options) => {
+      calls.push({ path, options });
+      if (error) throw error;
+      const query = new URLSearchParams(path.split('?')[1]);
+      if (query.has('id')) return rows.filter(row => row.id === query.get('id').slice(3));
+      return batches ? batches.shift() : rows;
+    } },
   };
   const m = { exports: {} };
-  new Function("exports", "require", "module", "console", compile("../lib/hymns-server.ts"))(m.exports, (name) => {
-    assert.ok(name in dependencies, `Unexpected dependency: ${name}`);
-    return dependencies[name];
-  }, m, { error() {} });
-  return { ...m.exports, lifetimes, get reads() { return reads; }, get documentReads() { return documentReads; } };
+  new Function('exports', 'require', 'module', compile('../lib/hymns-server.ts'))(m.exports, name => { assert.ok(name in deps, name); return deps[name]; }, m);
+  return { ...m.exports, calls, lifetimes };
 }
-
-test("missing configuration never substitutes dummy hymns", async () => {
-  const h = loader({ configured: false });
-  assert.deepEqual(await h.getHymns(), []);
-  assert.equal(h.reads, 0);
-  assert.deepEqual(h.lifetimes, ["seconds"]);
+test('Supabase failures throw instead of caching an empty hymnbook', async () => {
+  const h = loader({ error: new Error('Quota exceeded') });
+  await assert.rejects(h.getHymns(), /temporarily unavailable/);
+  assert.deepEqual(h.lifetimes, ['hours']);
 });
-test("an empty collection remains empty with a short recovery cache", async () => {
-  const h = loader();
-  assert.deepEqual(await h.getHymns(), []);
-  assert.deepEqual(h.lifetimes, ["seconds"]);
+test('a genuinely empty Supabase table stays empty with a stable lifetime', async () => {
+  const h = loader(); assert.deepEqual(await h.getHymns(), []); assert.deepEqual(h.lifetimes, ['hours']);
 });
-test("backend failures never substitute generated titles", async () => {
-  const h = loader({ fail: true });
-  assert.deepEqual(await h.getHymns(), []);
-  await assert.rejects(h.getHymnById("h-1"), /could not be loaded/);
-  assert.deepEqual(h.lifetimes, ["seconds", "hours"]);
+test('real rows map SQL field names, preserve zero sections, and exclude invalid rows', async () => {
+  const h = loader({ rows: [{ id: '001', number: 1, title: 'Real hymn', audio_url: 'https://example.test/audio', origin: 'Original', refrains: [{ refrainNumber: 0, text: 'Opening refrain' }], stanzas: [{ stanzaNumber: 1, text: 'Actual lyrics' }] }, { id: '002', number: 2 }] });
+  const rows = await h.getHymns();
+  assert.equal(rows.length, 1); assert.equal(rows[0].id, '001'); assert.equal(rows[0].sections[0].number, 0); assert.equal(rows[0].hasAudio, true); assert.match(rows[0].lyricsText, /Actual lyrics/);
+  assert.equal(h.calls[0].options.cache, 'force-cache');
+  assert.equal(h.calls[0].options.next.revalidate, 86400);
+  assert.deepEqual(h.calls[0].options.next.tags, ['hymns']);
 });
-test("only valid backend hymns are returned, in numeric order", async () => {
-  const h = loader({ docs: [
-    { id: "real-two", data: () => ({ number: 2, title: "Second", stanzas: [{ stanzaNumber: 0, text: "Actual lyrics" }] }) },
-    { id: "invalid", data: () => ({ number: 3 }) },
-    { id: "real-one", data: () => ({ number: 1, title: "First", origin: "Original title" }) },
-  ] });
-  const hymns = await h.getHymns();
-  assert.deepEqual(hymns.map((hymn) => hymn.id), ["real-one", "real-two"]);
-  assert.equal(hymns[1].sections[0].number, 0);
-  assert.equal(hymns[1].lyricsText, "Actual lyrics");
-  assert.deepEqual(h.lifetimes, ["hours"]);
+test('library pagination does not silently truncate at the Data API limit', async () => {
+  const batch = Array.from({ length: 500 }, (_, i) => ({ id: String(i + 1), number: i + 1, title: 'Real record' }));
+  const h = loader({ batches: [batch, [{ id: '501', number: 501, title: 'Last record' }]] });
+  assert.equal((await h.getHymns()).length, 501);
+  assert.match(h.calls[1].path, /offset=500/);
+});
+test('Next internal signals are rethrown unchanged', async () => {
+  const internal = Object.assign(new Error('Prerender'), { internal: true });
+  const h = loader({ error: internal }); await assert.rejects(h.getHymns(), e => e === internal);
 });
 
-test("Next.js internal prerender signals are rethrown instead of becoming an empty hymnbook", async () => {
-  const internal = Object.assign(new Error("Prerender signal"), { internal: true });
-  const h = loader({ fail: internal });
-  await assert.rejects(h.getHymns(), (error) => error === internal);
-  assert.deepEqual(h.lifetimes, []);
+test('offline downloads bypass public caches and reject empty or invalid libraries', async () => {
+  const h = loader({ rows: [{ id: '001', number: 1, title: 'Fresh hymn', stanzas: [{ stanzaNumber: 1, text: 'Fresh lyrics' }] }] });
+  assert.equal((await h.getFreshHymns())[0].title, 'Fresh hymn');
+  assert.equal(h.calls[0].options.cache, 'no-store');
+  await assert.rejects(loader().getFreshHymns(), /unavailable/);
+  await assert.rejects(loader({ rows: [{ id: '001', number: 1 }] }).getFreshHymns(), /Invalid/);
 });
-
-test("opening one hymn fetches one document without loading the collection", async () => {
-  const h = loader({ docs: [{ id: "001", data: () => ({ number: 1, title: "Actual hymn", stanzas: [{ stanzaNumber: 1, text: "Real lyrics" }] }) }] });
-  const hymn = await h.getHymnById("001");
-  assert.equal(hymn.title, "Actual hymn"); assert.equal(h.documentReads, 1); assert.equal(h.reads, 0);
-  assert.equal(await h.getHymnById("missing"), undefined);
+test('detail reads query a single ID and never load the collection', async () => {
+  const h = loader({ rows: [{ id: '001', number: 1, title: 'Real hymn', youtube_url: 'https://example.test/video' }] });
+  assert.equal((await h.getHymnById('001')).youtubeUrl, 'https://example.test/video');
+  assert.equal(h.calls.length, 1); assert.match(h.calls[0].path, /id=eq.001/);
+  assert.equal(await h.getHymnById('missing'), undefined);
+  assert.equal(await h.getHymnById('../bad'), undefined);
 });

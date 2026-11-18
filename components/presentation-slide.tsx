@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { HymnSection } from "@/lib/hymns";
+import { sectionHeading } from "@/lib/hymn-sections";
 
 export function PresentationSlide({ section, number, title, fontSize, blank = false }: {
   section?: HymnSection;
@@ -35,13 +36,13 @@ export function PresentationSlide({ section, number, title, fontSize, blank = fa
   }, [section, fontSize, blank]);
 
   return (
-    <div role="img" aria-label={blank ? "Blank audience screen" : section ? `${section.label}: ${section.lines.join(" ")}` : "End of presentation"} style={{ width: "100%", height: "100%", minHeight: 0, display: "flex", flexDirection: "column", background: "#000", color: "#fff", overflow: "hidden", padding: "3% 4%", boxSizing: "border-box" }}>
+    <div role="img" aria-label={blank ? "Blank audience screen" : section ? `${sectionHeading(section)}: ${section.lines.join(" ")}` : "End of presentation"} style={{ width: "100%", height: "100%", minHeight: 0, display: "flex", flexDirection: "column", background: "#000", color: "#fff", overflow: "hidden", padding: "3% 4%", boxSizing: "border-box" }}>
       {!blank && <>
         <p style={{ margin: "0 0 2%", textAlign: "center", color: "#aaa", fontSize: "clamp(9px, 1.2vw, 20px)", lineHeight: 1.3 }}>Hymn {number} &middot; {title}</p>
         <div ref={boxRef} style={{ flex: 1, minHeight: 0, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
           <div ref={textRef} style={{ width: "100%", textAlign: "center", fontWeight: 500, lineHeight: 1.45, overflowWrap: "anywhere" }}>
             {section ? <>
-              <p style={{ margin: "0 0 0.8em", fontSize: "0.38em", textTransform: "uppercase", letterSpacing: "0.15em", color: section.type === "refrain" ? "#ffb74d" : "#aaa" }}>{section.label}</p>
+              <p style={{ margin: "0 0 0.8em", fontSize: "0.38em", textTransform: "uppercase", letterSpacing: "0.15em", color: section.type === "refrain" ? "#ffb74d" : "#aaa" }}>{sectionHeading(section)}</p>
               {section.lines.filter((line) => line.trim()).map((line, index) => <p key={index} style={{ margin: "0.18em 0" }}>{line}</p>)}
             </> : <p style={{ margin: 0, color: "#aaa" }}>End of hymn</p>}
           </div>

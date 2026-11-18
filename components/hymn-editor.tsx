@@ -4,11 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { refreshHymnsAfterSave } from "@/app/actions/refresh-hymns";
 import { useState } from "react";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
-import { orderedSections, sectionsToBlocks } from "@/lib/hymn-sections";
+import { isSupabaseConfigured, supabaseRequest } from "@/lib/supabase";
+import { orderedSections, sectionHeading, sectionsToBlocks } from "@/lib/hymn-sections";
 import { lyricsTextFor, type Hymn, type HymnSection } from "@/lib/hymns";
 import { useAuth } from "@/lib/auth-store";
-import { db, getFirebaseAuth } from "@/lib/firebase";
 import { IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
 
 type SaveState = "idle" | "saving" | "saved" | "saved-stale" | "error";
@@ -22,7 +21,7 @@ export function HymnEditor({
   hymn: Hymn;
 }) {
   const router = useRouter();
-  const { user, isAdmin, checkingRole } = useAuth();
+  const { user, isAdmin, checkingRole, getAccessToken } = useAuth();
   const [number, setNumber] = useState(String(hymn.number));
   const [title, setTitle] = useState(hymn.title);
   const [origin, setOrigin] = useState(hymn.origin ?? "");
@@ -63,7 +62,7 @@ export function HymnEditor({
     setSaveState("saving");
     try {
       if (!user) throw new Error("Signed out");
-      const result = await refreshHymnsAfterSave(await user.getIdToken());
+      const result = await refreshHymnsAfterSave(await getAccessToken(user.uid));
       if (!result.ok) throw new Error("Refresh failed");
       setErrors([]);
       setSaveState("saved");
@@ -76,7 +75,7 @@ export function HymnEditor({
   };
 
   const save = async () => {
-    if (!user || !isAdmin || checkingRole || !db || getFirebaseAuth()?.currentUser?.uid !== user.uid) {
+    if (!user || !isAdmin || checkingRole || !isSupabaseConfigured) {
       setErrors(["You must be signed in as an administrator to save changes."]);
       setSaveState("error");
       return;
@@ -108,15 +107,18 @@ export function HymnEditor({
       doh: keySig.trim() || null,
       stanzas,
       refrains,
-      lyricsText: lyricsTextFor(orderedSections(sections)),
-      updatedAt: serverTimestamp(),
-      updatedBy: { uid: user.uid, email: user.email, displayName: user.displayName },
+      lyrics_text: lyricsTextFor(orderedSections(sections)),
     };
     if (ytMatch) payload.youtube = ytMatch[1];
-    else if (link) payload.audioUrl = link;
+    else if (link) payload.audio_url = link;
 
     try {
-      await updateDoc(doc(db, "hymns", hymn.id), payload);
+      const query = new URLSearchParams({ id: `eq.${hymn.id}`, select: "id" });
+      const saved = await supabaseRequest<{ id: string }[]>(`hymns?${query}`, {
+        method: "PATCH", token: await getAccessToken(user.uid), cache: "no-store",
+        headers: { Prefer: "return=representation" }, body: JSON.stringify(payload),
+      });
+      if (saved.length !== 1 || saved[0].id !== hymn.id) throw new Error("The hymn was not updated.");
       setDirty(false);
     } catch (error) {
       const denied = error && typeof error === "object" && "code" in error && error.code === "permission-denied";
@@ -402,7 +404,7 @@ export function HymnEditor({
                   }
                 >
                   <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted">
-                    {section.label}
+                    {sectionHeading(section)}
                   </p>
                   {section.lines
                     .filter((l) => l.trim())

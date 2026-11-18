@@ -2,7 +2,7 @@
 
 import { openAudienceWindow, type AudienceWindow } from "@/lib/presentation-display";
 import { useHymnNeighbors } from "@/lib/hymn-library";
-import { orderedSections } from "@/lib/hymn-sections";
+import { orderedSections, sectionHeading } from "@/lib/hymn-sections";
 
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-store";
@@ -350,7 +350,7 @@ export function HymnReader({ hymn }: { hymn: Hymn }) {
                         : "text-muted"
                     }`}
                   >
-                    {section.label}
+                    {sectionHeading(section)}
                   </p>
                 )}
                 {section.lines.map((line, li) => (

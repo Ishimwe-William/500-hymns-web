@@ -34,7 +34,7 @@ const sections = [
     id: "sharing",
     title: "Service providers and sharing",
     paragraphs: [
-      "Google sign-in, Firebase, and hosting providers process information needed to deliver their services. Their privacy policies apply to that processing. We use these services to operate and maintain the app.",
+        "Google sign-in, Firebase, Supabase, and hosting providers process information needed to deliver their services. Their privacy policies apply to that processing. We use these services to operate and maintain the app.",
       "Playing externally hosted audio, opening a video, or following an external link connects you to another provider. That provider handles information under its own privacy policy.",
     ],
   },

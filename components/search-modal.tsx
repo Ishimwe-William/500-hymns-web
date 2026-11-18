@@ -43,7 +43,10 @@ export function SearchModal({
 
   const openHymn = (id: string) => {
     onClose();
-    router.push(`/hymns/${id}`);
+    // A document navigation lets the service worker serve the standalone offline reader.
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+    if (!navigator.onLine) window.location.assign(`/hymns/${id}`);
+    else router.push(`/hymns/${id}`);
   };
 
   useEffect(() => {

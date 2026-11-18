@@ -1,5 +1,19 @@
 const { test, expect } = require("@playwright/test");
 
+test("guests can access Google sign-in from the avatar on desktop and phone", async ({ page }) => {
+  await page.goto("/hymns");
+  for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
+    await page.setViewportSize(viewport);
+    await page.getByRole("button", { name: "Account menu", exact: true }).click();
+    const signIn = page.getByRole("button", { name: "Sign in with Google", exact: true });
+    await expect(signIn).toBeVisible();
+    await expect(signIn).toBeEnabled();
+    await expect(page.getByRole("button", { name: "Sign out", exact: true })).toHaveCount(0);
+    await page.getByRole("button", { name: "Close menu", exact: true }).click({ position: { x: 5, y: 5 } });
+    await expect(signIn).toHaveCount(0);
+  }
+});
+
 test("guests can open hymns and navigate away and back without loading errors", async ({ page }) => {
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));

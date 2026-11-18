@@ -55,3 +55,12 @@ test("sign-in failures have actionable messages without exposing raw errors", ()
   assert.match(authErrorMessage({ code: "auth/popup-closed-by-user" }), /cancelled/);
   assert.doesNotMatch(authErrorMessage(new Error("secret")), /secret/);
 });
+
+test("missing account setup has a clear message and never grants admin", () => {
+  const h = harness(); h.login("reader");
+  h.roles[0].error({ code: "auth/account-setup-required" });
+  assert.equal(h.state.isAdmin, false);
+  assert.match(h.state.roleError, /not configured/);
+  assert.doesNotMatch(h.state.roleError, /connection/);
+  h.stop();
+});

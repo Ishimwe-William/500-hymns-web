@@ -25,6 +25,18 @@ export const IconBook = (p: P) => (
   </svg>
 );
 
+export const IconLogIn = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M15 3h5v18h-5M3 12h12m-5-5 5 5-5 5" />
+  </svg>
+);
+
+export const IconLogOut = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M9 3H4v18h5m2-9h10m-5-5 5 5-5 5" />
+  </svg>
+);
+
 export const IconSearch = (p: P) => (
   <svg {...base(p)}>
     <circle cx="11" cy="11" r="8" />

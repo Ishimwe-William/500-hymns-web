@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { presentationSections } from "@/lib/hymn-sections";
+import { presentationSections, sectionHeading } from "@/lib/hymn-sections";
 import { chooseAudienceScreen, fullscreenAudience, getPresentationScreens, openAudienceWindow, screenKey, screenLabel, type AudienceWindow, type PresentationScreen, type PresentationScreens } from "@/lib/presentation-display";
 import { PresentationSlide } from "@/components/presentation-slide";
 import "./presentation-view.css";
@@ -155,7 +155,7 @@ export function PresentationView({ hymn, initialOutput, onClose }: { hymn: Hymn;
           <h3 className="text-sm font-semibold">Up next</h3>
           <div className="presenter-next-slide overflow-hidden rounded-2xl border border-border"><PresentationSlide section={sections[safeIndex + 1]} number={hymn.number} title={hymn.title} fontSize={fontSize} /></div>
           <p className="text-xs leading-5 text-muted">Arrow keys or Space: next / previous. B: blank the audience screen. Escape: end presentation.</p>
-          <nav aria-label="Presentation slides" className="presenter-slide-list grid grid-cols-2 gap-2 overflow-y-auto rounded-2xl border border-border bg-card p-3">{sections.map((slide, i) => <button key={i} type="button" aria-current={i === safeIndex ? "step" : undefined} onClick={() => setIndex(i)} className={`${button} text-left ${i === safeIndex ? "border-accent-strong bg-accent-soft" : ""}`}>{i + 1}. {slide.label}</button>)}</nav>
+          <nav aria-label="Presentation slides" className="presenter-slide-list grid grid-cols-2 gap-2 overflow-y-auto rounded-2xl border border-border bg-card p-3">{sections.map((slide, i) => <button key={i} type="button" aria-label={`Slide ${i + 1}: ${sectionHeading(slide)}`} aria-current={i === safeIndex ? "step" : undefined} onClick={() => setIndex(i)} className={`${button} text-left ${i === safeIndex ? "border-accent-strong bg-accent-soft" : ""}`}>{sectionHeading(slide)}</button>)}</nav>
         </section>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card p-4">
