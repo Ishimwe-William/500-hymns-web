@@ -41,7 +41,7 @@ test('production installation support controls pages, passes Chrome checks, and 
   await cdp.send('Page.enable');
   await expect.poll(async () => (await cdp.send('Page.getInstallabilityErrors')).installabilityErrors).toEqual([]);
   const cached = await page.evaluate(async () => {
-    const cache = await caches.open('hymnbook-shell-v4');
+    const cache = await caches.open('hymnbook-shell-v7');
     return (await cache.keys()).map(request => new URL(request.url).pathname).sort();
   });
   expect(cached).toEqual(['/offline-presentation.js', '/offline-reader.js', '/offline.css', '/offline.html', '/pwa/icon-192.png', '/pwa/icon-512.png', '/pwa/icon-maskable-512.png']);
@@ -60,6 +60,11 @@ test('production installation support controls pages, passes Chrome checks, and 
   const audiencePromise = context.waitForEvent('page');
   await page.getByRole('button', { name: 'Present', exact: true }).click();
   const audience = await audiencePromise;
+  if (!await audience.evaluate(() => Boolean(document.fullscreenElement))) {
+    await audience.locator('body').click({ position: { x: 40, y: 40 } });
+  }
+  await expect.poll(() => audience.evaluate(() => Boolean(document.fullscreenElement))).toBe(true);
+  await expect(audience.getByRole('button', { name: 'Enter fullscreen', exact: true })).toHaveCount(0);
   await expect(audience.locator('.slide-lyrics')).toBeVisible();
   await expect(audience.locator('body')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
   await expect(audience.locator('.slide-lyrics')).toHaveCSS('white-space', 'pre-line');

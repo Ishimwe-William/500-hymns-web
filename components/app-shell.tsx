@@ -11,6 +11,7 @@ import { Suspense, useEffect, useState, type ReactNode } from "react";
 import { FavoritesProvider, PlayerProvider, useTheme } from "@/lib/client-store";
 import { AudioPlayer } from "@/components/audio-player";
 import { SearchModal } from "@/components/search-modal";
+import "./site-header.css";
 import type { PlayerHymn } from "@/lib/player-queue";
 import type { HymnSummary } from "@/lib/hymns";
 import {
@@ -53,7 +54,7 @@ function isActive(pathname: string, href: string) {
 }
 
 function navLinkClass(pathname: string, href: string) {
-  return `flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+  return `header-nav-link flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
     isActive(pathname, href)
       ? "bg-accent-soft text-accent-ink dark:text-accent-ink"
       : "text-muted hover:bg-accent-soft/60 hover:text-foreground"
@@ -62,7 +63,9 @@ function navLinkClass(pathname: string, href: string) {
 
 function DrawerContent({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname();
-  const { isAdmin } = useAuth();
+  const router = useRouter();
+  const { user, isAdmin, loading, busy, configured, signIn, signOut, error } = useAuth();
+  const { theme, toggle } = useTheme();
   const allLinks = [
     ...NAV,
     ...SECONDARY_NAV,
@@ -101,6 +104,17 @@ function DrawerContent({ onNavigate }: { onNavigate?: () => void }) {
       </nav>
 
       <div className="space-y-1 border-t border-border px-3 py-4">
+        <button type="button" onClick={toggle} aria-label="Toggle theme" className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium text-muted hover:bg-accent-soft/60 hover:text-foreground">
+          {theme === "dark" ? <IconSun width={20} height={20} /> : <IconMoon width={20} height={20} />} {theme === "dark" ? "Light mode" : "Dark mode"}
+        </button>
+        <button type="button" disabled={loading || busy || !configured} onClick={async () => {
+          const succeeded = user ? await signOut() : await signIn();
+          if (succeeded) { onNavigate?.(); router.replace("/hymns"); }
+        }} className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-[15px] font-medium text-foreground hover:bg-accent-soft/60 disabled:opacity-50">
+          {user ? <IconLogOut width={20} height={20} /> : <IconLogIn width={20} height={20} />}
+          {busy ? (user ? "Signing out..." : "Signing in...") : user ? "Sign out" : "Sign in with Google"}
+        </button>
+        {error && <p role="alert" className="px-4 text-xs text-red-600 dark:text-red-400">{error}</p>}
         <Link
           href={DOWNLOAD_APP_URL}
           onClick={onNavigate}
@@ -154,28 +168,32 @@ function Navbar({
   };
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border bg-topbar">
-      <div className="flex h-16 items-center gap-2 px-4 sm:gap-3 sm:px-6 lg:h-[72px] lg:px-10">
+    <header className="site-header sticky top-0 z-40 border-b border-border bg-topbar">
+      <div className="header-layout">
         {/* Hamburger (mobile/tablet) */}
         <button
           type="button"
           onClick={onMenu}
           aria-label="Open menu"
-          className="rounded-lg p-2 text-muted hover:bg-accent-soft md:hidden"
+          className="header-menu rounded-lg p-2 text-muted hover:bg-accent-soft"
         >
           <IconMenu width={22} height={22} />
         </button>
 
         {/* Brand */}
-        <Link href="/hymns" className="flex shrink-0 items-center gap-2.5">
-          <IconLogo />
-          <span className={`${matura.className} hidden  text-[15px] leading-snug text-center text-foreground sm:block`}>
+        <Link href="/hymns" aria-label="Indirimbo Zo Guhimbaza Imana" className="header-brand">
+          <IconLogo width={60} height={60} />
+          <span className={`${matura.className} header-brand-name text-center text-foreground`}>
             Indirimbo Zo<br />Guhimbaza Imana
           </span>
         </Link>
 
+        <button type="button" onClick={() => setSearchOpen(true)} aria-label="Search hymns" className="header-search-trigger rounded-lg p-2 text-muted hover:bg-accent-soft hover:text-foreground">
+          <IconSearch width={25} height={25} />
+        </button>
+
         {/* Primary nav */}
-        <div className="hidden items-center gap-1 md:flex lg:ml-6">
+        <nav aria-label="Main navigation" className="header-nav">
           {NAV.map((item) => (
             <Link
               key={item.href}
@@ -184,49 +202,52 @@ function Navbar({
               className={navLinkClass(pathname, item.href)}
             >
               <item.icon width={17} height={17} />
-              <span className="hidden xl:inline">{item.label}</span>
+              <span>{item.label}</span>
             </Link>
           ))}
-        </div>
+        </nav>
 
         {/* Search */}
         <form
-          className="ml-auto hidden w-full max-w-xs md:block lg:max-w-sm"
+          className="header-search"
           onSubmit={submit}
         >
-          <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-            <IconSearch width={16} height={16} className="shrink-0 text-muted" />
+          <div className="header-search-field flex items-center gap-3 rounded-xl border border-border bg-card px-4 focus-within:border-accent-strong focus-within:ring-2 focus-within:ring-accent-soft">
+            <IconSearch width={21} height={21} className="shrink-0 text-muted" />
             <input
               value={q}
               onFocus={() => setSearchOpen(true)}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="Search hymns…"
-              className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
+              aria-label="Search hymns"
+              className="min-w-0 w-full bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted"
             />
           </div>
         </form>
 
         {/* Theme + profile menu */}
-        <div className="relative ml-auto flex items-center gap-1.5 md:ml-0">
+        <div className="header-actions relative">
           <Link
             href={DOWNLOAD_APP_URL}
             aria-label="Download mobile app"
             title="Download mobile app"
-            className="hidden rounded-full p-2.5 text-muted transition-colors hover:bg-accent-soft hover:text-foreground lg:block"
+            className="header-action header-download rounded-xl text-muted transition-colors hover:bg-accent-soft hover:text-foreground"
           >
-            <IconDownload width={19} height={19} />
+            <IconDownload width={22} height={22} />
+            <span className="header-action-label">App</span>
           </Link>
           <button
             type="button"
             onClick={toggle}
             aria-label="Toggle theme"
-            className="rounded-full p-2.5 text-muted transition-colors hover:bg-accent-soft hover:text-foreground"
+            className="header-action rounded-xl text-muted transition-colors hover:bg-accent-soft hover:text-foreground"
           >
             {theme === "dark" ? (
-              <IconSun width={19} height={19} />
+              <IconSun width={22} height={22} />
             ) : (
-              <IconMoon width={19} height={19} />
+              <IconMoon width={22} height={22} />
             )}
+            <span className="header-action-label">Theme</span>
           </button>
           <div className="relative">
             <button
@@ -234,9 +255,10 @@ function Navbar({
               onClick={() => setMenuOpen((v) => !v)}
               aria-label="Account menu"
               aria-expanded={menuOpen}
-              className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-soft text-accent-ink transition-transform hover:scale-105 dark:text-accent-ink"
+              className="header-action rounded-xl text-foreground transition-colors hover:bg-accent-soft"
             >
-              {user?.displayName || user?.email ? <span className="text-sm font-semibold">{(user.displayName ?? user.email ?? "").slice(0, 1).toUpperCase()}</span> : <IconUser width={17} height={17} />}
+              <span className="header-avatar flex items-center justify-center rounded-full bg-accent-soft text-accent-ink">{user?.displayName || user?.email ? <span className="text-sm font-semibold">{(user.displayName ?? user.email ?? "").slice(0, 1).toUpperCase()}</span> : <IconUser width={21} height={21} />}</span>
+              <span className="header-action-label">{user ? "Account" : "Login"}</span>
             </button>
             {menuOpen && (
               <>
@@ -246,7 +268,7 @@ function Navbar({
                   className="fixed inset-0 z-40 cursor-default"
                   onClick={() => setMenuOpen(false)}
                 />
-                <div className="absolute right-0 top-11 z-50 w-52 overflow-hidden rounded-xl border border-border bg-card py-1.5 shadow-lg">
+                <div className="absolute right-0 top-full mt-3 z-50 w-52 overflow-hidden rounded-xl border border-border bg-card py-1.5 shadow-lg">
                   {[
                     { href: "/profile", label: "Profile", icon: IconUser },
                     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: IconShield }] : []),
@@ -297,23 +319,6 @@ function Navbar({
         </div>
       </div>
 
-      {/* Mobile search row */}
-      <form
-        className="border-t border-border/60 px-4 py-2 md:hidden"
-        onSubmit={submit}
-      >
-        <div className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2">
-          <IconSearch width={16} height={16} className="shrink-0 text-muted" />
-          <input
-            value={q}
-            onFocus={() => setSearchOpen(true)}
-            onChange={(e) => onQueryChange(e.target.value)}
-            placeholder="Search hymns…"
-            className="w-full bg-transparent text-sm text-foreground outline-none placeholder:text-muted"
-          />
-        </div>
-      </form>
-
       {searchOpen && (
         <SearchModal
           hymns={hymns}
@@ -330,10 +335,12 @@ export function AppShell({
   children,
   hymns,
   audioTracks,
+  copyrightYear,
 }: {
   children: ReactNode;
   hymns: HymnSummary[];
   audioTracks: PlayerHymn[];
+  copyrightYear: number;
 }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -345,7 +352,7 @@ export function AppShell({
         <div className="flex min-h-screen flex-col bg-background">
           <Suspense
             fallback={
-              <div className="h-16 border-b border-border bg-topbar lg:h-[72px]" />
+              <div className="header-placeholder border-b border-border bg-topbar" />
             }
           >
             <Navbar onMenu={() => setMobileOpen(true)} hymns={hymns} />
@@ -373,9 +380,9 @@ export function AppShell({
           )}
 
           <main className="flex-1 px-4 pb-10 pt-6 sm:px-6 lg:px-10 lg:pt-10">
-            <div className="mx-auto w-full max-w-6xl">{children}</div>
+            <div className="app-content mx-auto w-full max-w-6xl">{children}</div>
           </main>
-          <SiteFooter />
+          <SiteFooter year={copyrightYear} />
           <AudioPlayer />
         </div>
       </FavoritesProvider>

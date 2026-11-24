@@ -1,10 +1,49 @@
 const { test, expect } = require("@playwright/test");
 
-test("guests can access Google sign-in from the avatar on desktop and phone", async ({ page }) => {
+test("library sidebar opens a numbered hymn and stays out of the phone layout", async ({ page }, testInfo) => {
+  test.setTimeout(60000);
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto("/hymns");
+  const tools = page.getByRole("complementary", { name: "Hymnbook tools" });
+  await expect(tools).toBeVisible();
+  await page.getByRole("button", { name: "Grid view", exact: true }).click();
+  await expect(page.getByText("Showing 1–24 of 500 hymns", { exact: true })).toBeVisible();
+  await tools.getByText("Alphabetical index", { exact: true }).click();
+  await tools.getByRole("button", { name: "A", exact: true }).click();
+  await expect(tools.getByRole("button", { name: "A", exact: true })).toHaveAttribute("aria-pressed", "true");
+  const titles = await page.locator("main h3").filter({ hasNotText: /Open a hymn|Take your hymns offline/ }).allTextContents();
+  expect(titles.length).toBeGreaterThan(0);
+  expect(titles.every((title) => title.startsWith("A"))).toBe(true);
+  await tools.getByRole("button", { name: "All titles", exact: true }).click();
+  await expect(page.getByText("Showing 1–24 of 500 hymns", { exact: true })).toBeVisible();
+  await tools.getByLabel("Enter its number, 1–500").fill("56");
+  await tools.getByRole("link", { name: /^56\./ }).click();
+  await expect(page).toHaveURL(/\/hymns\/056$/);
+  await expect(tools).toBeVisible();
+  await tools.getByText("Alphabetical index", { exact: true }).click();
+  await tools.getByRole("button", { name: "A", exact: true }).click();
+  await expect(tools.getByRole("navigation", { name: "A hymn titles" })).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("detail-sidebar.png") });
+  for (const route of ["/favorites", "/recent"]) {
+    await page.goto(route);
+    await expect(tools).toBeVisible();
+    await tools.getByText("Alphabetical index", { exact: true }).click();
+    await tools.getByRole("button", { name: "A", exact: true }).click();
+    await expect(tools.getByRole("navigation", { name: "A hymn titles" })).toBeVisible();
+  }
+  await page.goto("/hymns");
+  await page.getByRole("button", { name: "Grid view", exact: true }).click();
+  await page.screenshot({ path: testInfo.outputPath("library-sidebar.png") });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(tools).toBeHidden();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+});
+
+test("guests can access Google sign-in from the desktop account menu and phone drawer", async ({ page }) => {
   await page.goto("/hymns");
   for (const viewport of [{ width: 1280, height: 800 }, { width: 390, height: 844 }]) {
     await page.setViewportSize(viewport);
-    await page.getByRole("button", { name: "Account menu", exact: true }).click();
+    await page.getByRole("button", { name: viewport.width < 768 ? "Open menu" : "Account menu", exact: true }).click();
     const signIn = page.getByRole("button", { name: "Sign in with Google", exact: true });
     await expect(signIn).toBeVisible();
     await expect(signIn).toBeEnabled();

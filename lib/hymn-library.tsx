@@ -10,5 +10,5 @@ export function HymnLibraryProvider({ hymns, children }: { hymns: HymnSummary[];
 export function useHymnNeighbors(id: string) {
   const hymns = useContext(HymnLibrary);
   const index = hymns.findIndex((hymn) => hymn.id === id);
-  return { prev: index > 0 ? hymns[index - 1] : null, next: index >= 0 && index < hymns.length - 1 ? hymns[index + 1] : null };
+  return { prev: index > 0 ? hymns[index - 1] : null, next: index >= 0 && index < hymns.length - 1 ? hymns[index + 1] : null, upcoming: index >= 0 ? hymns.slice(index + 1, index + 6) : [] };
 }

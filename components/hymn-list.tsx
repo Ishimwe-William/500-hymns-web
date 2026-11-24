@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { HymnLink as Link } from "@/components/hymn-link";
 import { useFavorites } from "@/lib/client-store";
 import type { HymnSummary } from "@/lib/hymns";
 import { IconChevronRight, IconHeart, IconMusic } from "@/components/icons";

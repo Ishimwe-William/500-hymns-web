@@ -13,7 +13,7 @@ export async function createShareImage(hymn?: Hymn) {
         <img src={`data:image/png;base64,${logo.toString("base64")}`} width={90} height={90} style={{ width: 90, height: 90, flexShrink: 0, borderRadius: "50%" }} alt="" />
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <div style={{ fontSize: 28, color: "#8de4d4" }}>{APP_NAME}</div>
-          <div style={{ fontSize: 22, color: "#a6bdb7" }}>500 Kinyarwanda Hymns</div>
+          <div style={{ fontSize: 22, color: "#a6bdb7" }}>500 Kinyarwanda hymns · Seventh-day Adventist Church, Rwanda</div>
         </div>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

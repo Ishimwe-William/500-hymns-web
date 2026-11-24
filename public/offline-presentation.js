@@ -49,20 +49,18 @@ window.HymnOfflinePresentation = {
     function fullscreen() {
       if (!audience || audience.closed) return;
       audience.focus();
-      void audience.document.documentElement.requestFullscreen?.().catch(() => {
-        status.textContent = "Choose Enter fullscreen in the audience window.";
+      if (audience.document.fullscreenElement) return;
+      void audience.document.documentElement.requestFullscreen?.({ navigationUI: "hide" }).catch(() => {
+        status.textContent = "Click anywhere in the audience window, or press F there, to enter fullscreen.";
       });
     }
     function drawAudience() {
       if (!audience || audience.closed) return;
       const doc = audience.document;
       doc.body.replaceChildren(frame(doc, slides[index], blank));
-      const enter = button(doc, "Enter fullscreen", fullscreen);
-      enter.className = "audience-fullscreen";
-      doc.body.append(enter);
     }
     function openAudience() {
-      if (audience && !audience.closed) { audience.focus(); return; }
+      if (audience && !audience.closed) { fullscreen(); return; }
       audience = window.open("", "hymn-offline-audience", "popup,width=1280,height=720");
       if (!audience) { status.textContent = "Allow popups, then choose Open audience window."; return; }
       const doc = audience.document;
@@ -77,10 +75,18 @@ window.HymnOfflinePresentation = {
       doc.head.replaceChildren(node(doc, "title", doc.title), stylesheet);
       doc.documentElement.style.background = "#000";
       doc.body.className = "offline-audience";
+      doc.addEventListener("click", () => { if (!doc.fullscreenElement) fullscreen(); });
+      doc.addEventListener("keydown", event => {
+        if (!doc.fullscreenElement && !event.ctrlKey && !event.altKey && !event.metaKey && ["f", "enter"].includes(event.key.toLowerCase())) {
+          event.preventDefault(); fullscreen();
+        }
+      });
       audience.addEventListener("keydown", keydown);
       audience.addEventListener("resize", drawAudience);
+      doc.addEventListener("fullscreenchange", drawAudience);
       drawAudience();
-      status.textContent = "Move the audience window to your projector and choose Enter fullscreen there.";
+      status.textContent = "Move the audience window to your projector, then click anywhere in it to enter fullscreen.";
+      fullscreen();
     }
     async function detect() {
       if (!window.getScreenDetails) { status.textContent = "Move the audience window to your projector manually."; return; }
@@ -94,8 +100,8 @@ window.HymnOfflinePresentation = {
         if (audience) {
           audience.moveTo(screen.availLeft, screen.availTop);
           audience.resizeTo(screen.availWidth, screen.availHeight);
-          try { await audience.document.documentElement.requestFullscreen({ screen }); }
-          catch { status.textContent = "Audience moved. Choose Enter fullscreen in the audience window."; }
+          try { await audience.document.documentElement.requestFullscreen({ navigationUI: "hide", screen }); }
+          catch { status.textContent = "Audience moved. Click anywhere in the audience window to enter fullscreen."; }
         }
       } catch { status.textContent = "Display access unavailable. Move the audience window manually."; }
     }

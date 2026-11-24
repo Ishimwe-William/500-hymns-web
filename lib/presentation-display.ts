@@ -32,7 +32,21 @@ export function openAudienceWindow(): AudienceWindow | null {
   const favicon = doc.createElement("link"); favicon.rel = "icon"; favicon.href = `${location.origin}/icon.png`; doc.head.appendChild(favicon);
   const root = doc.createElement("div"); root.style.cssText = "width:100vw;height:100vh;background:#000;";
   doc.body.appendChild(root);
-  return { window: audience, root };
+  const output = { window: audience, root };
+  // Native listeners keep the activation in the audience document. Projection
+  // has no visible controls; one click (or F/Enter) retries if auto-entry is denied.
+  doc.addEventListener("click", () => {
+    if (!doc.fullscreenElement) void fullscreenAudience(output);
+  });
+  doc.addEventListener("keydown", (event) => {
+    if (!doc.fullscreenElement && !event.ctrlKey && !event.altKey && !event.metaKey && ["f", "enter"].includes(event.key.toLowerCase())) {
+      event.preventDefault();
+      void fullscreenAudience(output);
+    }
+  });
+  // Request during the Present click, before asynchronous display detection.
+  void fullscreenAudience(output);
+  return output;
 }
 
 export async function getPresentationScreens(): Promise<PresentationScreens | null> {
@@ -43,10 +57,12 @@ export async function getPresentationScreens(): Promise<PresentationScreens | nu
 export async function fullscreenAudience(output: AudienceWindow, screen?: PresentationScreen | null) {
   if (output.window.closed) return false;
   try {
+    if (!screen && output.window.document.fullscreenElement) return true;
     if (screen) {
       output.window.moveTo(screen.availLeft, screen.availTop);
       output.window.resizeTo(screen.availWidth, screen.availHeight);
     }
+    output.window.focus();
     await output.window.document.documentElement.requestFullscreen({ navigationUI: "hide", ...(screen ? { screen } : {}) } as FullscreenOptions);
     return true;
   } catch { return false; }

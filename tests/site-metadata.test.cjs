@@ -6,7 +6,7 @@ const load = (path) => {
   const source = ts.transpileModule(fs.readFileSync(require.resolve(path), "utf8"), { compilerOptions: { module: ts.ModuleKind.CommonJS } }).outputText;
   const m = { exports: {} }; new Function("exports", "require", "module", source)(m.exports, require, m); return m.exports;
 };
-const { publicMetadata, hymnDescription, jsonLd } = load("../lib/site.ts");
+const { APP_NAME, SITE_DESCRIPTION, publicMetadata, hymnDescription, jsonLd } = load("../lib/site.ts");
 const { chooseAudienceScreen } = load("../lib/presentation-display.ts");
 test("share metadata has absolute canonical links and large image cards", () => {
   const metadata = publicMetadata("Hymn 1 - Title", "Description", "/hymns/001", "/hymns/001/opengraph-image");
@@ -17,8 +17,17 @@ test("share metadata has absolute canonical links and large image cards", () => 
 });
 test("hymn descriptions use real titles, origins, and lyrics within snippet length", () => {
   const description = hymnDescription({ number: 1, title: "Title", origin: "Original", lyricsText: "Line one\n".repeat(30) });
-  assert.ok(description.startsWith("Hymn 1: Title. Original title: Original."));
+  assert.ok(description.startsWith("Hymn 1: Title. Seventh-day Adventist hymn in Rwanda. Original title: Original."));
   assert.ok(description.length <= 160); assert.ok(!description.includes("\n"));
+});
+
+test("homepage metadata identifies the Adventist hymnbook and Rwanda across search and sharing", () => {
+  const metadata = publicMetadata(APP_NAME, SITE_DESCRIPTION, "/hymns");
+  assert.match(metadata.title.absolute, /SDA Hymns Rwanda/);
+  for (const description of [metadata.description, metadata.openGraph.description, metadata.twitter.description]) {
+    assert.match(description, /Seventh-day Adventist Church in Rwanda/);
+    assert.match(description, /500 Kinyarwanda hymns/);
+  }
 });
 test("structured data cannot escape its script element", () => {
   const text = jsonLd({ name: "</script><script>alert(1)</script>" });

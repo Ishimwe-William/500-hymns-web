@@ -46,15 +46,15 @@ export function AudioPlayer() {
   const progress = duration > 0 ? (position / duration) * 100 : 0;
 
   return (
-    <div role="region" aria-label="Audio player" className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-player">
+    <div role="region" aria-label="Audio player" className="audio-player fixed inset-x-0 bottom-0 z-40 border-t border-border bg-player">
       <div className="flex h-20 items-center gap-4 px-4 sm:px-6 lg:px-10">
         {/* Left: track info */}
-        <div className="flex min-w-0 items-center gap-3">
+        <div className="flex min-w-0 shrink-0 items-center gap-3 sm:shrink">
           <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg">
             <Image src="/brand/artwork-light.png" alt="" width={40} height={40} className="dark:hidden" />
             <Image src="/brand/artwork-dark.png" alt="" width={40} height={40} className="hidden dark:block" />
           </span>
-          <div className="min-w-0">
+          <div className="hidden min-w-0 sm:block">
             <p className="truncate text-sm font-medium text-foreground">
               {title}
             </p>
@@ -68,7 +68,7 @@ export function AudioPlayer() {
         </div>
 
         {/* Middle: controls */}
-        <div className="mx-auto flex w-full max-w-md flex-col items-center gap-1">
+        <div className="mx-auto flex min-w-0 w-full max-w-md flex-col items-center gap-1">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -82,12 +82,15 @@ export function AudioPlayer() {
             </button>
             <button
               type="button"
-              aria-label={status === "playing" ? "Pause" : "Play"}
+              aria-label={status === "loading" ? "Loading audio" : status === "playing" ? "Pause" : "Play"}
+              aria-busy={status === "loading"}
               onClick={toggle}
               disabled={status === "loading"}
               className="flex h-11 w-11 items-center justify-center rounded-full bg-accent-strong text-white transition-transform hover:scale-105 disabled:opacity-60 dark:text-black"
             >
-              {status === "playing" ? (
+              {status === "loading" ? (
+                <svg aria-hidden="true" viewBox="0 0 24 24" width={20} height={20} className="animate-spin"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" opacity=".25" /><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="3" /></svg>
+              ) : status === "playing" ? (
                 <IconPause width={20} height={20} />
               ) : (
                 <IconPlay width={20} height={20} className="ml-0.5" />

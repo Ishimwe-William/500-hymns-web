@@ -5,6 +5,7 @@ import { useHymnNeighbors } from "@/lib/hymn-library";
 import { orderedSections, sectionHeading } from "@/lib/hymn-sections";
 
 import Link from "next/link";
+import { HymnLink } from "@/components/hymn-link";
 import { useAuth } from "@/lib/auth-store";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PresentationView } from "@/components/presentation-view";
@@ -21,6 +22,7 @@ import {
   IconChevronRight,
   IconExternal,
   IconHeart,
+  IconMusic,
   IconPause,
   IconPlay,
   IconPresent,
@@ -41,6 +43,7 @@ function ShareButton({ title }: { title: string }) {
   return (
     <button
       type="button"
+      aria-label={copied ? "Link copied" : "Share"}
       onClick={async () => {
         const url = window.location.href;
         try {
@@ -59,10 +62,10 @@ function ShareButton({ title }: { title: string }) {
           /* clipboard unavailable */
         }
       }}
-      className="flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent-soft"
+      className="reader-icon-control flex items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent-soft"
     >
       <IconShare width={16} height={16} />
-      {copied ? "Link copied" : "Share"}
+      <span className="hidden sm:inline">{copied ? "Link copied" : "Share"}</span>
     </button>
   );
 }
@@ -75,21 +78,24 @@ function AudioButton({ hymn }: { hymn: Hymn }) {
 
   if (!hymn.hasAudio) {
     return (
-      <span className="rounded-full border border-border px-4 py-2 text-sm text-muted">
-        Audio unavailable
+      <span role="img" aria-label="Audio unavailable" title="Audio unavailable" className="reader-icon-control relative flex items-center gap-2 rounded-full border border-border px-4 py-2 text-sm text-muted">
+        <span aria-hidden="true" className="relative sm:hidden"><IconMusic width={18} height={18} /><span className="absolute left-0 top-2 h-px w-5 -rotate-45 bg-current" /></span>
+        <span className="hidden sm:inline">Audio unavailable</span>
       </span>
     );
   }
   return (
     <button
       type="button"
+      aria-label={loading ? "Loading audio" : playing ? "Pause" : "Play audio"}
+      aria-busy={loading}
       onClick={() =>
         playing || loading ? player.pause() : player.play(hymn)
       }
-      className="flex items-center gap-2 rounded-full bg-accent-strong px-4 py-2 text-sm font-medium text-white transition-transform hover:scale-[1.02] dark:text-black"
+      className="reader-icon-control flex items-center gap-2 rounded-full bg-accent-strong px-4 py-2 text-sm font-medium text-white transition-transform hover:scale-[1.02] dark:text-black"
     >
-      {playing ? <IconPause width={16} height={16} /> : <IconPlay width={16} height={16} />}
-      {loading ? "Loading…" : playing ? "Pause" : "Play audio"}
+      {loading ? <svg aria-hidden="true" viewBox="0 0 24 24" width={18} height={18} className="animate-spin"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="3" opacity=".25" /><path d="M12 3a9 9 0 0 1 9 9" fill="none" stroke="currentColor" strokeWidth="3" /></svg> : playing ? <IconPause width={16} height={16} /> : <IconPlay width={16} height={16} />}
+      <span className="hidden sm:inline">{loading ? "Loading…" : playing ? "Pause" : "Play audio"}</span>
     </button>
   );
 }
@@ -233,7 +239,7 @@ function canPresentOnDevice() {
 
 export function HymnReader({ hymn }: { hymn: Hymn }) {
   const canPresent = useSyncExternalStore(subscribeDesktopInput, canPresentOnDevice, () => false);
-  const { prev, next } = useHymnNeighbors(hymn.id);
+  const { prev, next, upcoming } = useHymnNeighbors(hymn.id);
   const { isAdmin } = useAuth();
   const { has, toggle } = useFavorites();
   const fav = has(hymn.id);
@@ -255,8 +261,8 @@ export function HymnReader({ hymn }: { hymn: Hymn }) {
       <RecentRecorder hymnId={hymn.id} />
 
       {/* Reader toolbar */}
-      <div className="flex flex-wrap items-center gap-3 lg:flex-nowrap">
-        <div className="flex shrink-0 items-center gap-2 text-sm text-muted">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="reader-breadcrumb flex shrink-0 items-center gap-2 text-sm text-muted">
           <Link href="/hymns" className="hover:text-foreground">Hymns</Link>
           <span>/</span>
           <span className="text-foreground">Hymn {hymn.number}</span>
@@ -265,19 +271,19 @@ export function HymnReader({ hymn }: { hymn: Hymn }) {
           </Link>
         </div>
 
-        <nav aria-label="Hymn navigation" className="flex shrink-0 items-center gap-2 lg:ml-auto">
+        <nav aria-label="Hymn navigation" className="flex min-w-0 max-w-full flex-wrap items-center gap-2 lg:ml-auto">
           {prev && (
-            <Link href={`/hymns/${prev.id}`} prefetch={true} title={`${prev.number}. ${prev.title}`} aria-label={`Previous hymn: ${prev.number}. ${prev.title}`} className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
+            <HymnLink href={`/hymns/${prev.id}`} prefetch={true} title={`${prev.number}. ${prev.title}`} aria-label={`Previous hymn: ${prev.number}. ${prev.title}`} className="reader-icon-control flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
               <IconChevronLeft width={16} height={16} />
-              Previous {prev.number}
-            </Link>
+              <span className="hidden sm:inline">Previous {prev.number}</span>
+            </HymnLink>
           )}
           <AudioButton hymn={hymn} />
           {next && (
-            <Link href={`/hymns/${next.id}`} prefetch={true} title={`${next.number}. ${next.title}`} aria-label={`Next hymn: ${next.number}. ${next.title}`} className="flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
-              Next {next.number}
+            <HymnLink href={`/hymns/${next.id}`} prefetch={true} title={`${next.number}. ${next.title}`} aria-label={`Next hymn: ${next.number}. ${next.title}`} className="reader-icon-control flex items-center gap-1 rounded-full border border-border bg-card px-3 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">
+              <span className="hidden sm:inline">Next {next.number}</span>
               <IconChevronRight width={16} height={16} />
-            </Link>
+            </HymnLink>
           )}
         </nav>
 
@@ -294,18 +300,27 @@ export function HymnReader({ hymn }: { hymn: Hymn }) {
           {isAdmin && <Link href={`/admin/hymns/${hymn.id}/edit`} className="rounded-full border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft">Edit</Link>}
           <button
             type="button"
+            aria-label={fav ? "Favorited" : "Favorite"}
+            aria-pressed={fav}
             onClick={() => toggle(hymn.id)}
-            className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
+            className={`reader-icon-control flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
               fav
                 ? "border-accent bg-accent-soft text-accent-ink dark:text-accent-ink"
                 : "border-border bg-card text-foreground hover:bg-accent-soft"
             }`}
           >
             <IconHeart filled={fav} width={16} height={16} />
-            {fav ? "Favorited" : "Favorite"}
+            <span className="hidden sm:inline">{fav ? "Favorited" : "Favorite"}</span>
           </button>
         </div>
       </div>
+
+      {upcoming.length > 0 && <nav aria-label="Upcoming hymns" className="flex flex-wrap items-center gap-2 text-sm">
+        <span className="shrink-0 text-muted">Up next</span>
+        {upcoming.map((item) => <HymnLink key={item.id} href={`/hymns/${encodeURIComponent(item.id)}`} prefetch={true}
+          aria-label={`Hymn ${item.number}: ${item.title}`} title={`${item.number}. ${item.title}`}
+          className="flex shrink-0 items-center gap-1 rounded-lg border border-border bg-card px-2 py-1.5 font-medium hover:bg-accent-soft sm:px-3">{item.number}</HymnLink>)}
+      </nav>}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_320px]">
         {/* Reader card */}

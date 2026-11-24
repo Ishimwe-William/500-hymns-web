@@ -59,10 +59,11 @@ test('offline downloads bypass public caches and reject empty or invalid librari
   await assert.rejects(loader().getFreshHymns(), /unavailable/);
   await assert.rejects(loader({ rows: [{ id: '001', number: 1 }] }).getFreshHymns(), /Invalid/);
 });
-test('detail reads query a single ID and never load the collection', async () => {
+test('details reuse the shared cached library without issuing per-hymn queries', async () => {
   const h = loader({ rows: [{ id: '001', number: 1, title: 'Real hymn', youtube_url: 'https://example.test/video' }] });
   assert.equal((await h.getHymnById('001')).youtubeUrl, 'https://example.test/video');
-  assert.equal(h.calls.length, 1); assert.match(h.calls[0].path, /id=eq.001/);
+  assert.equal(h.calls.length, 1); assert.match(h.calls[0].path, /order=number.asc,id.asc/);
+  assert.ok(!h.calls[0].path.includes('id=eq.'));
   assert.equal(await h.getHymnById('missing'), undefined);
   assert.equal(await h.getHymnById('../bad'), undefined);
 });

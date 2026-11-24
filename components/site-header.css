@@ -1,0 +1,69 @@
+.site-header { box-shadow: 0 3px 16px rgb(0 0 0 / 0.05); }
+@media (max-width: 639px) {
+  .reader-breadcrumb { flex-basis: 100%; }
+  .reader-icon-control { width: 44px; height: 44px; padding: 0; justify-content: center; }
+}
+.hymn-sidebar-panel { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+body:has(.audio-player) .hymn-sidebar-panel { max-height: calc(100dvh - 12rem); }
+body:has(.audio-player) .app-content { padding-bottom: 5rem; }
+.app-content:has(.hymn-library-page, .hymn-with-sidebar) { max-width: 1800px; }
+.hymn-library-hero {
+  min-height: 180px;
+  padding: clamp(20px, 2vw, 32px);
+  background-color: var(--card);
+  background-image: linear-gradient(90deg, var(--card) 0%, color-mix(in srgb, var(--card) 96%, transparent) 36%, color-mix(in srgb, var(--card) 55%, transparent) 65%, color-mix(in srgb, var(--card) 10%, transparent) 100%), url("/hymn-landscape.webp");
+  background-size: cover;
+  background-position: center, center 55%;
+}
+@media (max-width: 767px) {
+  .hymn-library-hero { background-image: linear-gradient(90deg, var(--card), color-mix(in srgb, var(--card) 80%, transparent)), url("/hymn-landscape.webp"); }
+}
+@media (min-width: 1800px) { .hymn-card-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.header-layout { display: grid; grid-template-columns: 32px minmax(0, 1fr) 36px; align-items: center; gap: 8px; padding: 14px 16px; max-width: 1920px; margin-inline: auto; }
+.header-menu { display: flex; align-items: center; justify-content: center; width: 32px; height: 36px; }
+.header-brand { display: flex; align-items: center; justify-self: center; min-width: 0; gap: 8px; }
+.header-brand > img { width: 44px; height: 44px; flex-shrink: 0; }
+.header-brand-name { font-size: clamp(13px, 3.8vw, 18px); line-height: 1.45; white-space: nowrap; }
+.header-search-trigger { display: flex; align-items: center; justify-content: center; width: 36px; height: 40px; grid-column: 3; grid-row: 1; }
+.header-placeholder { height: 76px; }
+.header-nav { display: none; }
+.header-search { display: none; width: 100%; min-width: 0; }
+.header-search-field { height: 46px; }
+.header-actions { display: none; align-items: center; gap: 2px; }
+.header-action { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-width: 32px; min-height: 36px; padding: 4px; }
+.header-action-label { display: none; }
+.header-download { display: none; }
+.header-avatar { width: 32px; height: 32px; }
+@media (min-width: 768px) {
+  .header-layout { grid-template-columns: auto auto minmax(120px, 1fr) auto; gap: 12px; padding: 14px 20px; }
+  .header-menu { display: none; }
+  .header-search-trigger { display: none; }
+  .header-placeholder { height: 84px; }
+  .header-brand { grid-column: 1; grid-row: 1; gap: 12px; justify-self: start; }
+  .header-brand > img { width: 44px; height: 44px; }
+  .header-brand-name { font-size: 16px; }
+  .header-nav { display: flex; align-items: center; gap: 2px; grid-column: 2; grid-row: 1; white-space: nowrap; }
+  .header-nav-link { padding: 12px 10px; font-size: 15px; }
+  .header-nav-link > span { display: none; }
+  .header-search { display: block; grid-column: 3; grid-row: 1; justify-self: end; max-width: 560px; }
+  .header-search-field { height: 50px; }
+  .header-actions { display: flex; grid-column: 4; grid-row: 1; justify-self: end; gap: 4px; }
+  .header-action { min-width: 36px; min-height: 44px; padding: 6px; }
+  .header-action-label { font-size: 12px; line-height: 1.2; }
+  .header-download { display: flex; }
+  .header-avatar { width: 28px; height: 28px; }
+}
+@media (min-width: 1280px) {
+  .header-layout { grid-template-columns: minmax(240px, 280px) minmax(400px, 1fr) minmax(260px, 560px) auto; gap: 20px; min-height: 80px; padding: 10px 32px; }
+  .header-placeholder { height: 80px; }
+  .header-brand { grid-column: 1; grid-row: 1; }
+  .header-brand > img { width: 52px; height: 52px; }
+  .header-brand-name { font-size: 20px; }
+  .header-nav { grid-column: 2; grid-row: 1; justify-content: center; }
+  .header-nav-link { font-size: 16px; }
+  .header-nav-link > span { display: inline; }
+  .header-action { min-width: 48px; min-height: 56px; }
+  .header-action-label { display: inline; }
+  .header-search { grid-column: 3; grid-row: 1; }
+  .header-actions { grid-column: 4; grid-row: 1; }
+}

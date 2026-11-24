@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { SectionPage } from "@/components/section-page";
 import { MOBILE_APP_URL, TESTERS_GROUP_URL } from "@/lib/links";
 
-export const metadata: Metadata = publicMetadata("Get the mobile beta", "Join the BunsenPlus testers group and download the Indirimbo Zo Guhimbaza Imana beta from Google Play for offline hymn access.", "/download");
+export const metadata: Metadata = publicMetadata("Get the mobile beta", "Download Indirimbo Zo Guhimbaza Imana for Seventh-day Adventist Church hymns in Rwanda. Join the testers group for the Google Play beta and offline lyrics.", "/download");
 
 export default function DownloadPage() {
   return <SectionPage title="Get the mobile app" description="The app is currently in beta. Join our testers group first, then get the app from Google Play." sections={[

@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { searchHymns, type HymnSummary } from "@/lib/hymns";
 import { IconSearch } from "@/components/icons";
+import { HymnSpinner } from "@/components/hymn-link";
 
 const MAX_RESULTS = 8;
 
@@ -19,7 +20,13 @@ export function SearchModal({
   onClose: () => void;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const openedOn = useRef(pathname);
+  const [pending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (pathname !== openedOn.current) onClose();
+  }, [pathname, onClose]);
 
   const [expandedQuery, setExpandedQuery] = useState<string | null>(null);
   const matches = useMemo(() => query.trim() ? searchHymns(hymns, query) : [], [hymns, query]);
@@ -42,11 +49,13 @@ export function SearchModal({
   }, []);
 
   const openHymn = (id: string) => {
-    onClose();
+    if (pending) return;
+    const href = `/hymns/${encodeURIComponent(id)}`;
+    if (pathname === href) { onClose(); return; }
     // A document navigation lets the service worker serve the standalone offline reader.
     // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-    if (!navigator.onLine) window.location.assign(`/hymns/${id}`);
-    else router.push(`/hymns/${id}`);
+    if (!navigator.onLine) { onClose(); window.location.assign(href); }
+    else startTransition(() => router.push(href));
   };
 
   useEffect(() => {
@@ -107,6 +116,7 @@ export function SearchModal({
         </div>
 
         {/* Results */}
+        {pending && <p role="status" className="flex items-center gap-2 border-b border-border px-5 py-3 text-sm text-muted"><HymnSpinner />Opening hymn…</p>}
         <div ref={resultsRef} className="max-h-[50vh] overflow-y-auto p-2">
           {query.trim() && results.length === 0 && (
             <p className="px-4 py-8 text-center text-sm text-muted">

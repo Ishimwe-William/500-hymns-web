@@ -1,9 +1,10 @@
 "use client";
 
-import Link from "next/link";
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { HymnLink as Link } from "@/components/hymn-link";
+import { useMemo, useState, useSyncExternalStore, type ReactNode } from "react";
 import { filterHymns, type HymnSummary } from "@/lib/hymns";
-import { useFavorites } from "@/lib/client-store";
+import { useFavorites, useRecent } from "@/lib/client-store";
+import { OfflineDownload } from "@/components/offline-download";
 import { HymnList } from "@/components/hymn-list";
 import {
   IconGrid,
@@ -13,7 +14,48 @@ import {
   IconSearch,
 } from "@/components/icons";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 24;
+
+export function BrowseSidebar({ hymns, letter, onLetter }: { hymns: HymnSummary[]; letter?: string; onLetter?: (letter: string) => void }) {
+  const { ids } = useFavorites();
+  const { entries } = useRecent();
+  const [number, setNumber] = useState("");
+  const [indexLetter, setIndexLetter] = useState("");
+  const selectedLetter = letter ?? indexLetter;
+  const chooseLetter = onLetter ?? setIndexLetter;
+  const chosen = hymns.find((hymn) => String(hymn.number) === number.trim());
+  const recent = entries.map((entry) => hymns.find((hymn) => hymn.id === entry.id)).filter((hymn): hymn is HymnSummary => Boolean(hymn)).slice(0, 3);
+  return <aside aria-label="Hymnbook tools" className="hidden min-w-0 self-stretch xl:block">
+    <div tabIndex={0} aria-label="Scrollable hymnbook tools" className="hymn-sidebar-panel sticky top-24 max-h-[calc(100dvh-7rem)] space-y-5 overflow-y-auto overscroll-contain rounded-2xl border border-border bg-card p-5 focus-visible:outline-2 focus-visible:outline-accent-strong">
+      <details className="border-b border-border pb-4">
+        <summary className="cursor-pointer font-semibold text-foreground">Alphabetical index</summary>
+        <p className="mt-3 text-xs text-muted">Browse titles by their first letter.</p>
+        <div className="mt-3 grid grid-cols-5 gap-2" aria-label="Title initials">
+          {"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").map((initial) => <button key={initial} type="button" aria-pressed={selectedLetter === initial} disabled={!hymns.some((hymn) => hymn.title.toLocaleUpperCase().startsWith(initial))} onClick={() => chooseLetter(initial)} className={`rounded-lg border border-border py-2 text-sm font-medium disabled:opacity-25 ${selectedLetter === initial ? "bg-accent-strong text-white dark:text-black" : "text-foreground hover:bg-accent-soft"}`}>{initial}</button>)}
+        </div>
+        <button type="button" onClick={() => chooseLetter("")} aria-pressed={!selectedLetter} className="mt-3 text-sm font-medium text-accent-strong hover:underline">All titles</button>
+        {!onLetter && selectedLetter && <nav aria-label={`${selectedLetter} hymn titles`} className="mt-3 space-y-2">
+          {hymns.filter((hymn) => hymn.title.toLocaleUpperCase().startsWith(selectedLetter)).sort((a, b) => a.title.localeCompare(b.title)).map((hymn) => <Link key={hymn.id} href={`/hymns/${hymn.id}`} className="block text-sm text-muted hover:text-accent-strong">{hymn.number}. {hymn.title}</Link>)}
+        </nav>}
+      </details>
+      <section className="space-y-3">
+        <h3 className="font-semibold text-foreground">Open a hymn</h3>
+        <label htmlFor="hymn-number" className="block text-sm text-muted">Enter its number, 1–500</label>
+        <input id="hymn-number" type="number" min={1} max={500} value={number} onChange={(event) => setNumber(event.target.value)} className="w-full rounded-xl border border-border bg-background px-3 py-2 text-foreground outline-none focus:border-accent-strong" placeholder="e.g. 56" />
+        {chosen ? <Link href={`/hymns/${chosen.id}`} className="block rounded-xl bg-accent-soft px-3 py-2 text-sm font-medium text-accent-ink">{chosen.number}. {chosen.title} →</Link> : <p className="text-xs text-muted">Choose a number to open the lyrics.</p>}
+      </section>
+      <nav aria-label="Your hymnbook" className="space-y-2 border-t border-border pt-4 text-sm">
+        <Link href="/favorites" className="flex items-center justify-between rounded-lg py-2 text-foreground hover:text-accent-strong"><span>Favorites</span><span className="rounded-full bg-accent-soft px-2 text-accent-ink">{ids.length}</span></Link>
+        <Link href="/recent" className="block rounded-lg py-2 text-foreground hover:text-accent-strong">Recently opened →</Link>
+        {recent.map((hymn) => <Link key={hymn.id} href={`/hymns/${hymn.id}`} className="block truncate py-1 text-muted hover:text-accent-strong">{hymn.number}. {hymn.title}</Link>)}
+      </nav>
+      <section className="space-y-3 border-t border-border pt-4 text-sm text-muted">
+        <h3 className="font-semibold text-foreground">Take your hymns offline</h3>
+        <OfflineDownload />
+      </section>
+    </div>
+  </aside>;
+}
 
 function subscribeConnection(update: () => void) {
   window.addEventListener("online", update);
@@ -91,18 +133,21 @@ function HymnCard({ hymn }: { hymn: HymnSummary }) {
 export function HymnBrowser({
   hymns,
   initialQuery = "",
+  intro,
 }: {
   hymns: HymnSummary[];
   initialQuery?: string;
+  intro?: ReactNode;
 }) {
   const [sort, setSort] = useState("number");
   const [query, setQuery] = useState(initialQuery);
   const [view, setView] = useState<"list" | "grid">("list");
   const [page, setPage] = useState(1);
+  const [letter, setLetter] = useState("");
 
   const filtered = useMemo(
-    () => filterHymns(hymns, { sort, query }),
-    [hymns, sort, query]
+    () => filterHymns(hymns, { sort, query }).filter((hymn) => !letter || hymn.title.toLocaleUpperCase().startsWith(letter)),
+    [hymns, sort, query, letter]
   );
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -126,9 +171,13 @@ export function HymnBrowser({
 
 
   return (
-    <div className="space-y-5">
+    <div className="grid items-start gap-6 xl:grid-cols-[260px_minmax(0,1fr)]">
+      <BrowseSidebar hymns={hymns} letter={letter} onLetter={(initial) => { setLetter(initial); setSort("title"); reset(); }} />
+      <div className="min-w-0 space-y-5">
+      {intro}
       {/* Browse controls */}
       <div className="flex flex-wrap items-center gap-3">
+        {letter && <button type="button" onClick={() => { setLetter(""); reset(); }} className="rounded-xl bg-accent-soft px-3 py-2 text-sm text-accent-ink">Titles: {letter} · Clear ×</button>}
         <select
           value={sort}
           onChange={(e) => {
@@ -177,6 +226,7 @@ export function HymnBrowser({
                 type="button"
                 onClick={() => {
                   setQuery("");
+                  setLetter("");
                   reset();
                 }}
                 className="mt-3 rounded-full bg-accent-strong px-4 py-2 text-sm font-medium text-white dark:text-black"
@@ -187,7 +237,7 @@ export function HymnBrowser({
           }
         />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="hymn-card-grid grid grid-cols-1 gap-4 sm:grid-cols-2 2xl:grid-cols-3">
           {pageItems.map((h) => (
             <HymnCard key={h.id} hymn={h} />
           ))}
@@ -243,6 +293,7 @@ export function HymnBrowser({
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

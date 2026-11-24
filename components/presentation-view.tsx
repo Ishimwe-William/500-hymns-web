@@ -11,19 +11,11 @@ import type { Hymn } from "@/lib/hymns";
 const SIZES = [32, 40, 48, 56, 64, 72];
 const button = "rounded-xl border border-border bg-card px-4 py-2 text-sm font-medium text-foreground hover:bg-accent-soft disabled:opacity-40";
 
-function AudienceOutput({ output, hymn, section, fontSize, blank }: {
-  output: AudienceWindow; hymn: Hymn; section?: Hymn["sections"][number]; fontSize: number; blank: boolean;
+function AudienceOutput({ hymn, section, fontSize, blank }: {
+  hymn: Hymn; section?: Hymn["sections"][number]; fontSize: number; blank: boolean;
 }) {
-  const [fullscreen, setFullscreen] = useState(false);
-  useEffect(() => {
-    const update = () => setFullscreen(Boolean(output.window.document.fullscreenElement));
-    output.window.document.addEventListener("fullscreenchange", update);
-    update();
-    return () => output.window.document.removeEventListener("fullscreenchange", update);
-  }, [output]);
   return <div style={{ width: "100vw", height: "100vh", position: "relative", background: "#000" }}>
     <PresentationSlide section={section} number={hymn.number} title={hymn.title} fontSize={fontSize} blank={blank} />
-    {!fullscreen && <button type="button" onClick={() => void fullscreenAudience(output)} style={{ position: "absolute", bottom: 12, right: 12, padding: "10px 16px", border: "1px solid #555", borderRadius: 10, background: "#222", color: "#fff", fontSize: 14, cursor: "pointer" }}>Enter fullscreen</button>}
   </div>;
 }
 
@@ -44,20 +36,18 @@ export function PresentationView({ hymn, initialOutput, onClose }: { hymn: Hymn;
   const fontSize = SIZES[sizeIndex];
 
   const place = useCallback(async (audience: AudienceWindow, display: PresentationScreen | null) => {
-    if (!display) {
-      if (alive.current) setStatus("Move the audience window to your projector, then choose Enter fullscreen there.");
-      return;
-    }
     const full = await fullscreenAudience(audience, display);
-    if (alive.current) setStatus(full ? `Projecting on ${screenLabel(display)}.` : `Audience placed on ${screenLabel(display)}. Choose Enter fullscreen in that window if needed.`);
-    window.focus();
+    if (alive.current) setStatus(full ? display ? `Projecting on ${screenLabel(display)}.` : "Audience is fullscreen. Press Esc in the audience window to leave fullscreen." : "Click anywhere in the audience window, or press F there, to fill the display.");
+    // Keep single-display fullscreen focused; refocusing the presenter can make
+    // browsers leave fullscreen. A separate projector can keep both views open.
+    if (display && full) window.focus();
   }, []);
 
   const detect = useCallback(async (audience: AudienceWindow | null) => {
     try {
       const details = await getPresentationScreens();
       if (!alive.current) return;
-      if (!details) { setStatus("Automatic display detection is unavailable. Move the audience window to your projector and choose Enter fullscreen there."); return; }
+      if (!details) { if (audience) await place(audience, null); return; }
       detailsRef.current = details;
       setScreens([...details.screens]);
       const external = chooseAudienceScreen(details);
@@ -65,7 +55,7 @@ export function PresentationView({ hymn, initialOutput, onClose }: { hymn: Hymn;
       if (audience && !audience.window.closed) await place(audience, external);
       else setStatus(external ? `Ready to project on ${screenLabel(external)}. Open the audience window.` : "No second display detected. You can still open an audience window and move it manually.");
     } catch {
-      if (alive.current) setStatus("Display access was not granted. Move the audience window manually, or select Detect displays to try again.");
+      if (alive.current && audience) await place(audience, null);
     }
   }, [place]);
 
@@ -125,7 +115,7 @@ export function PresentationView({ hymn, initialOutput, onClose }: { hymn: Hymn;
   }, [sections.length, output, onClose]);
 
   const open = () => {
-    if (output && !output.window.closed) { output.window.focus(); return; }
+    if (output && !output.window.closed) { void place(output, target); return; }
     const audience = openAudienceWindow(); setOutput(audience);
     if (!audience) { setStatus("The audience window was blocked. Allow pop-ups for this site and try again."); return; }
     if (target) void place(audience, target); else void detect(audience);
@@ -164,6 +154,6 @@ export function PresentationView({ hymn, initialOutput, onClose }: { hymn: Hymn;
         <div className="flex items-center gap-2"><span className="text-sm text-muted">Text size</span><button type="button" aria-label="Smaller text" disabled={sizeIndex === 0} onClick={() => setSizeIndex((i) => i - 1)} className={button}>A-</button><button type="button" aria-label="Larger text" disabled={sizeIndex === SIZES.length - 1} onClick={() => setSizeIndex((i) => i + 1)} className={button}>A+</button></div>
       </div>
     </div>
-    {output && !output.window.closed && createPortal(<AudienceOutput output={output} hymn={hymn} section={section} fontSize={fontSize} blank={blank} />, output.root)}
+    {output && !output.window.closed && createPortal(<AudienceOutput hymn={hymn} section={section} fontSize={fontSize} blank={blank} />, output.root)}
   </div>;
 }

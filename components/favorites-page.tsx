@@ -24,12 +24,11 @@ export default function FavoritesPage({ hymns }: { hymns: HymnSummary[] }) {
 
   return (
     <div className="w-full space-y-6">
-      <header className="space-y-1">
+      <header className="hymn-library-hero flex flex-col justify-center space-y-2 rounded-2xl border border-border">
         <h2 className="text-3xl font-bold text-foreground">Your favorites</h2>
         <p className="text-muted">The hymns you keep close.</p>
+        <p className="max-w-xl text-sm text-muted">Favorites are saved on this device. No sign-in is required.</p>
       </header>
-
-      <p className="text-sm text-muted">Favorites are saved on this device. No sign-in is required.</p>
 
       {favHymns.length > 0 && (
         <div className="flex items-center justify-between gap-3">

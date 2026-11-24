@@ -86,16 +86,15 @@ export async function getHymns(): Promise<Hymn[]> {
   }
 }
 
-/** Detail pages read only their document, not the entire hymn collection. */
+/** Reuse the cached library already loaded by the layout instead of making a
+ * separate database round trip for every detail page and background prefetch. */
 export async function getHymnById(id: string): Promise<Hymn | undefined> {
   "use cache";
   cacheTag(HYMNS_CACHE_TAG);
   cacheLife("hours");
   if (!id || id.includes("/") || id.length > 1500) return undefined;
   try {
-    const query = new URLSearchParams({ select: "*", id: `eq.${id}`, limit: "1" });
-    const rows = await supabaseRequest<Record<string, unknown>[]>(`hymns?${query}`, publicReadOptions);
-    return rows[0] ? hymnFromDoc(id, rows[0]) ?? undefined : undefined;
+    return (await getHymns()).find((hymn) => hymn.id === id);
   } catch (error) {
     unstable_rethrow(error);
     throw new Error("The hymn could not be loaded. Please try again.");

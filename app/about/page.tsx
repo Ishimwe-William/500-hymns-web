@@ -1,4 +1,4 @@
-import { publicMetadata } from "@/lib/site";
+import { SITE_DESCRIPTION, publicMetadata } from "@/lib/site";
 import { DOWNLOAD_APP_URL } from "@/lib/links";
 import { matura } from "@/lib/fonts";
 import type { Metadata } from "next";
@@ -7,9 +7,9 @@ import { SectionPage } from "@/components/section-page";
 import { IconBook, IconDownload, IconHeart, IconLogo, IconSearch } from "@/components/icons";
 import { version } from "@/package.json";
 
-export const metadata: Metadata = publicMetadata("About", "Discover the mission, features, and story behind Indirimbo Zo Guhimbaza Imana, a collection of 500 Kinyarwanda hymns.", "/about");
+export const metadata: Metadata = publicMetadata("About", SITE_DESCRIPTION, "/about");
 const features = [
-  { title: "A collection to treasure", description: "Browse five hundred Kinyarwanda hymns, bringing traditional and contemporary Christian music into one digital hymnbook.", icon: IconBook },
+  { title: "A collection to treasure", description: "Browse 500 Kinyarwanda hymns used by the Seventh-day Adventist Church in Rwanda, brought together in one digital hymnbook.", icon: IconBook },
   { title: "Find the words you know", description: "Search by hymn number, title, original title, or a phrase from the lyrics.", icon: IconSearch },
   { title: "Keep your favorites close", description: "Save hymns for quick access, revisit recent readings, and choose the text size and theme that suit you.", icon: IconHeart },
 ];
@@ -24,12 +24,12 @@ export default function AboutPage() {
         </div>
         <div className="mx-auto max-w-xl text-center lg:mx-0 lg:max-w-md lg:text-left">
           <p className="text-sm font-medium text-accent-strong dark:text-accent">Worship. Devotion. Community.</p>
-          <p className="mt-2 text-[15px] leading-7 text-muted">A digital hymnbook that makes sacred music easy to find, read, and share, wherever you gather to sing.</p>
+          <p className="mt-2 text-[15px] leading-7 text-muted">A digital collection of 500 Kinyarwanda hymns used by the Seventh-day Adventist Church in Rwanda, ready to read, sing, and share.</p>
         </div>
       </div>
     } sections={[
       { id: "mission", title: "Our purpose", content: <>
-        <p>Hymns Collection brings together traditional and contemporary Christian hymns. Our mission is to provide easy access to sacred music for worship, personal devotion, and community singing.</p>
+        <p>Indirimbo Zo Guhimbaza Imana brings together 500 Kinyarwanda hymns used by the Seventh-day Adventist Church in Rwanda. Our mission is to make these hymns easy to access for church worship, personal devotion, and community singing.</p>
         <p>By making these hymns available in digital format, the project aims to preserve and promote Rwandan spiritual music heritage for everyday use.</p>
       </> },
       { id: "features", title: "Features", content: <div className="divide-y divide-border">

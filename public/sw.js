@@ -1,5 +1,5 @@
 /* Public shell plus an explicitly downloaded lyrics pack; no account pages. */
-const SHELL_CACHE = "hymnbook-shell-v4";
+const SHELL_CACHE = "hymnbook-shell-v7";
 const LYRICS_CACHE = "hymnbook-lyrics-v1";
 const PACK_KEY = "/__offline/library";
 const PUBLIC_ASSETS = ["/offline.html", "/offline-reader.js", "/offline-presentation.js", "/offline.css", "/pwa/icon-192.png", "/pwa/icon-512.png", "/pwa/icon-maskable-512.png"];

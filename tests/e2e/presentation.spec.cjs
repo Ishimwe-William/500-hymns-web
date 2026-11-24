@@ -46,6 +46,16 @@ test("presenter preview synchronizes a separate audience window and cleans up", 
   const popup = page.waitForEvent("popup");
   await page.getByRole("button", { name: "Present", exact: true }).click();
   const audience = await popup;
+  // Browsers can require activation inside the popup after window.open consumes
+  // the original gesture. Either route must reach real fullscreen, not maximize.
+  if (await audience.evaluate(() => Boolean(document.fullscreenElement))) await audience.evaluate(() => document.exitFullscreen());
+  await audience.locator("body").click({ position: { x: 40, y: 40 } });
+  await expect.poll(() => audience.evaluate(() => Boolean(document.fullscreenElement))).toBe(true);
+  await expect(audience.getByRole("button", { name: "Enter fullscreen", exact: true })).toHaveCount(0);
+  await audience.evaluate(() => document.exitFullscreen());
+  await audience.bringToFront();
+  await audience.keyboard.press("f");
+  await expect.poll(() => audience.evaluate(() => Boolean(document.fullscreenElement))).toBe(true);
   const presenter = page.getByRole("dialog", { name: "Presenter view" });
   await expect(presenter).toBeVisible();
   const audienceSlide = audience.getByRole("img").first();
@@ -68,6 +78,30 @@ test("presenter preview synchronizes a separate audience window and cleans up", 
   await presenter.getByRole("button", { name: "End presentation", exact: true }).click();
   await expect(presenter).toHaveCount(0);
   await expect.poll(() => second.isClosed()).toBe(true);
+});
+
+test("Present requests fullscreen immediately without an external display", async ({ page }) => {
+  await page.addInitScript(() => {
+    window.getScreenDetails = async () => null;
+    window.fullscreenRequests = [];
+    const original = window.open.bind(window);
+    window.open = (...args) => {
+      const popup = original(...args);
+      if (popup) popup.document.documentElement.requestFullscreen = async options => {
+        window.fullscreenRequests.push(options.navigationUI);
+        Object.defineProperty(popup.document, "fullscreenElement", { configurable: true, value: popup.document.documentElement });
+        popup.document.dispatchEvent(new Event("fullscreenchange"));
+      };
+      return popup;
+    };
+  });
+  await page.goto("/hymns/001");
+  const opened = page.waitForEvent("popup");
+  await page.getByRole("button", { name: "Present", exact: true }).click();
+  const audience = await opened;
+  await expect.poll(() => page.evaluate(() => window.fullscreenRequests)).toContain("hide");
+  await expect(audience.getByRole("button", { name: "Enter fullscreen", exact: true })).toHaveCount(0);
+  await page.getByRole("button", { name: "End presentation", exact: true }).click();
 });
 
 test("blocked audience popups keep the local preview and explain how to retry", async ({ page }) => {

@@ -3,11 +3,12 @@ import type { Hymn } from "@/lib/hymns";
 
 export const SITE_URL = "https://500-hymns.vercel.app";
 export const APP_NAME = "Indirimbo Zo Guhimbaza Imana";
-export const SITE_DESCRIPTION = "Read and sing 500 Kinyarwanda hymns. Search by number, title, original title or lyrics, save favorites, and present lyrics for worship.";
+export const HYMNBOOK_CONTEXT = "Seventh-day Adventist Church hymns in Rwanda";
+export const SITE_DESCRIPTION = "Explore 500 Kinyarwanda hymns used by the Seventh-day Adventist Church in Rwanda. Read lyrics, search, save favorites, and present songs for worship.";
 export const absoluteUrl = (path: string) => new URL(path, SITE_URL).toString();
 
 export function publicMetadata(title: string, description: string, path: string, imagePath = "/opengraph-image"): Metadata {
-  const pageTitle = title === APP_NAME ? APP_NAME : `${title} | ${APP_NAME}`;
+  const pageTitle = title === APP_NAME ? `${APP_NAME} | SDA Hymns Rwanda` : `${title} | ${APP_NAME}`;
   const image = { url: absoluteUrl(imagePath), width: 1200, height: 630, alt: pageTitle };
   return {
     title: { absolute: pageTitle }, description,
@@ -17,7 +18,7 @@ export function publicMetadata(title: string, description: string, path: string,
   };
 }
 export function hymnDescription(hymn: Pick<Hymn, "number" | "title" | "origin" | "lyricsText">) {
-  const prefix = `Hymn ${hymn.number}: ${hymn.title}.${hymn.origin ? ` Original title: ${hymn.origin}.` : ""}`;
+  const prefix = `Hymn ${hymn.number}: ${hymn.title}. Seventh-day Adventist hymn in Rwanda.${hymn.origin ? ` Original title: ${hymn.origin}.` : ""}`;
   return `${prefix} ${hymn.lyricsText.replace(/\s+/g, " ").trim() || "Read the Kinyarwanda lyrics and sing along."}`.slice(0, 160).trim();
 }
 export function jsonLd(value: unknown) { return JSON.stringify(value).replace(/</g, "\\u003c"); }

@@ -1,12 +1,14 @@
 # Indirimbo Zo Guhimbaza Imana
 
-A digital hymnbook for browsing, reading, and presenting 500 Kinyarwanda hymns. Built by [BunsenPlus](https://bunsenplus.vercel.app).
+A digital hymnbook for browsing, reading, and presenting 500 Kinyarwanda hymns used by the Seventh-day Adventist Church in Rwanda. Built by [BunsenPlus](https://bunsenplus.vercel.app).
 
 ## Features
 
 - Public hymn browsing, search, and reading without signing in.
+- Hymn titles and links are present in the initial server-rendered HTML. The homepage uses an HTTP redirect to `/hymns`; HTML-limited AI/search readers receive blocking metadata, and the sitemap exposes all 500 hymn pages. Public reading does not wait for login or browser JavaScript.
 - Search by hymn number, title, original title, or lyrics in a popup, without changing the URL. Expand the popup to see all matches.
 - List and grid views, with sorting by number or title.
+- The reader prepares the next five complete hymn pages in the background and exposes them in an **Up next** row. Detail pages reuse the shared server-side library cache, and hymn links/search show a spinner if navigation is still pending.
 - Favorites, recently opened hymns, theme, text size, and verse-number preferences stored locally on the device.
 - Audio playback when a hymn has an audio source, with previous/next controls that skip hymns without recordings.
 - Live presentation with a local presenter preview, synchronized audience window, keyboard navigation, and adjustable text size.
@@ -63,7 +65,7 @@ All website download links lead to `/download`, where these steps are explained.
 
 ## Presenting hymns
 
-Open a hymn and select **Present**. The presenter keeps a current and next-slide preview while a separate audience window displays the lyrics. Allow popups and display access when requested. Supported browsers can place the audience window on an external screen and request fullscreen there. If automatic display selection is unavailable, move the audience window to the projector and select **Enter fullscreen**. Browser permissions can require an additional click before fullscreen is allowed.
+Open a hymn and select **Present**. The presenter keeps a current and next-slide preview while a separate audience window displays the lyrics without visible controls. Allow popups and display access when requested. Supported browsers can place the audience window on an external screen and request fullscreen there. If automatic fullscreen is blocked, click anywhere in the audience window or press **F** or **Enter** there. This works online and offline. True fullscreen hides Chrome's title and address bars; maximizing the window does not. Browser permissions can require that audience-window interaction.
 
 Use the arrow keys to navigate, **B** to blank the audience screen, and **Escape** to end the presentation. Refrains repeat after stanzas during presentation. Ending the presentation closes the audience window.
 
