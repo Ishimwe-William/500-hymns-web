@@ -22,7 +22,9 @@ window.renderHymnLyrics = function (node, section) {
     if (range.start < end) continue;
     node.append(node.ownerDocument.createTextNode(text.slice(end, range.start)));
     const marked = node.ownerDocument.createElement("u");
-    marked.style.fontWeight = "bold";
+    marked.style.textDecorationSkipInk = "none";
+    marked.style.textUnderlineOffset = "0.15em";
+    marked.style.textDecorationThickness = "0.06em";
     marked.textContent = text.slice(range.start, range.end);
     node.append(marked);
     end = range.end;

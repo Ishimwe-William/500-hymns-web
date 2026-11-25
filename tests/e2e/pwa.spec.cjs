@@ -41,7 +41,7 @@ test('production installation support controls pages, passes Chrome checks, and 
   await cdp.send('Page.enable');
   await expect.poll(async () => (await cdp.send('Page.getInstallabilityErrors')).installabilityErrors).toEqual([]);
   const cached = await page.evaluate(async () => {
-    const cache = await caches.open('hymnbook-shell-v8');
+    const cache = await caches.open('hymnbook-shell-v9');
     return (await cache.keys()).map(request => new URL(request.url).pathname).sort();
   });
   expect(cached).toEqual(['/lyric-format.js', '/offline-presentation.js', '/offline-reader.js', '/offline.css', '/offline.html', '/pwa/icon-192.png', '/pwa/icon-512.png', '/pwa/icon-maskable-512.png']);

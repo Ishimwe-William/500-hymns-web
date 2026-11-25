@@ -2,7 +2,7 @@ import { APP_NAME, SITE_URL, SITE_DESCRIPTION, HYMNBOOK_CONTEXT, absoluteUrl, js
 import { DEVELOPER_URL } from "@/lib/links";
 import type { Metadata, Viewport } from "next";
 import { PwaRegistration } from "@/components/pwa-registration";
-import { Roboto } from "next/font/google";
+import { Nunito_Sans } from "next/font/google";
 import { matura } from "@/lib/fonts";
 import "./globals.css";
 import { AppShell } from "@/components/app-shell";
@@ -10,10 +10,10 @@ import { getHymns } from "@/lib/hymns-server";
 import { toSummaries } from "@/lib/hymns";
 import { getCopyrightYear } from "@/lib/copyright-year";
 
-const roboto = Roboto({
-  subsets: ["latin"],
-  variable: "--font-roboto",
-  weight: ["400", "500", "700"],
+const nunitoSans = Nunito_Sans({
+  subsets: ["latin", "latin-ext"],
+  variable: "--font-nunito-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -39,7 +39,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const hymns = toSummaries(all);
   const audioTracks = all.filter((hymn) => Boolean(hymn.audioUrl?.trim())).map(({ id, number, title, audioUrl }) => ({ id, number, title, audioUrl }));
   return (
-    <html lang="en" className={`${roboto.variable} ${matura.variable} h-full antialiased`}>
+    <html lang="en" className={`${nunitoSans.variable} ${matura.variable} h-full antialiased`}>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd({ "@context": "https://schema.org", "@graph": [

@@ -73,6 +73,8 @@ test("server-rendered lyrics contain underline markup and preserved blank lines 
     section: { lines: ["Sing\\n\\n<script>"], underline: ["Sing"] },
   }));
   assert.match(html, /white-space:pre-wrap/);
+  assert.match(html, /text-decoration-skip-ink:none/);
+  assert.doesNotMatch(html, /font-weight/);
   assert.match(html, /<u[^>]*>Sing<\/u>\n\n&lt;script&gt;/);
 });
 const ids = (sections) => sections.map((s) => `${s.type}:${s.number}`);

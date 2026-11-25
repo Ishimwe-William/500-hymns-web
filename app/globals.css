@@ -45,7 +45,7 @@
   --color-sidebar: var(--sidebar-bg);
   --color-topbar: var(--topbar-bg);
   --color-player: var(--player-bg);
-  --font-sans: var(--font-roboto), ui-sans-serif, system-ui, sans-serif;
+  --font-sans: var(--font-nunito-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 body {
