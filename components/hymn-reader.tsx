@@ -6,6 +6,7 @@ import { orderedSections, sectionHeading } from "@/lib/hymn-sections";
 
 import Link from "next/link";
 import { HymnLink } from "@/components/hymn-link";
+import { SectionLyrics } from "@/components/section-lyrics";
 import { useAuth } from "@/lib/auth-store";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { PresentationView } from "@/components/presentation-view";
@@ -368,11 +369,7 @@ export function HymnReader({ hymn }: { hymn: Hymn }) {
                     {sectionHeading(section)}
                   </p>
                 )}
-                {section.lines.map((line, li) => (
-                  <p key={li} className="relative">
-                    {line}
-                  </p>
-                ))}
+                <p className="relative"><SectionLyrics section={section} /></p>
               </section>
             ))}
           </div>

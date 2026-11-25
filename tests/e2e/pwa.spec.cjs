@@ -41,10 +41,10 @@ test('production installation support controls pages, passes Chrome checks, and 
   await cdp.send('Page.enable');
   await expect.poll(async () => (await cdp.send('Page.getInstallabilityErrors')).installabilityErrors).toEqual([]);
   const cached = await page.evaluate(async () => {
-    const cache = await caches.open('hymnbook-shell-v7');
+    const cache = await caches.open('hymnbook-shell-v8');
     return (await cache.keys()).map(request => new URL(request.url).pathname).sort();
   });
-  expect(cached).toEqual(['/offline-presentation.js', '/offline-reader.js', '/offline.css', '/offline.html', '/pwa/icon-192.png', '/pwa/icon-512.png', '/pwa/icon-maskable-512.png']);
+  expect(cached).toEqual(['/lyric-format.js', '/offline-presentation.js', '/offline-reader.js', '/offline.css', '/offline.html', '/pwa/icon-192.png', '/pwa/icon-512.png', '/pwa/icon-maskable-512.png']);
   await context.setOffline(true);
   await page.goto('/hymns/001');
   await expect(page.getByRole('heading', { name: 'Reconnect to your hymnbook' })).toBeVisible();
@@ -54,9 +54,19 @@ test('production installation support controls pages, passes Chrome checks, and 
   await page.goto('/settings#offline-storage');
   await page.getByRole('button', { name: 'Download hymns', exact: true }).click();
   await expect(page.getByText('500 hymns saved for offline reading and search.')).toBeVisible({ timeout: 60000 });
+  await page.evaluate(async () => {
+    const cache = await caches.open('hymnbook-lyrics-v1');
+    const pack = await (await cache.match('/__offline/library')).json();
+    const section = pack.hymns.find(hymn => hymn.id === '372').sections[0];
+    section.lines = ['Offline format\\n\\nSecond line'];
+    section.underline = ['Offline format'];
+    await cache.put('/__offline/library', new Response(JSON.stringify(pack), { headers: { 'Content-Type': 'application/json' } }));
+  });
   await context.setOffline(true);
   await page.goto('/hymns/372');
   await expect(page.locator('.reader h1')).toContainText('Kwa Kwizera');
+  await expect(page.locator('.reader .lyrics u').first()).toHaveText('Offline format');
+  expect(await page.locator('.reader .lyrics').first().textContent()).toBe('Offline format\n\nSecond line');
   const audiencePromise = context.waitForEvent('page');
   await page.getByRole('button', { name: 'Present', exact: true }).click();
   const audience = await audiencePromise;
@@ -67,7 +77,9 @@ test('production installation support controls pages, passes Chrome checks, and 
   await expect(audience.getByRole('button', { name: 'Enter fullscreen', exact: true })).toHaveCount(0);
   await expect(audience.locator('.slide-lyrics')).toBeVisible();
   await expect(audience.locator('body')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
-  await expect(audience.locator('.slide-lyrics')).toHaveCSS('white-space', 'pre-line');
+  await expect(audience.locator('.slide-lyrics')).toHaveCSS('white-space', 'pre-wrap');
+  await expect(audience.locator('.slide-lyrics u')).toHaveText('Offline format');
+  expect(await audience.locator('.slide-lyrics').textContent()).toBe('Offline format\n\nSecond line');
   await expect(audience.locator('.offline-slide')).toHaveCSS('text-align', 'center');
   await expect.poll(() => audience.locator('.slide-lyrics').evaluate(el => parseFloat(getComputedStyle(el).fontSize))).toBeGreaterThan(32);
   expect(await audience.locator('link[rel="stylesheet"]').count()).toBe(0);

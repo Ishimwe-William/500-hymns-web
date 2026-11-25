@@ -1,10 +1,12 @@
 export type SectionType = "verse" | "refrain";
+export type UnderlineTarget = string | { word: string; occurrence: number };
 
 export interface HymnSection {
   type: SectionType;
   number?: number;
   label: string;
   lines: string[];
+  underline?: UnderlineTarget[];
 }
 
 export interface Hymn {
@@ -33,7 +35,7 @@ export interface HymnSummary {
 }
 
 export function lyricsTextFor(sections: HymnSection[]): string {
-  return sections.flatMap((s) => s.lines).join("\n");
+  return sections.flatMap((s) => s.lines).join("\n").replace(/\\r\\n|\\n|\\r/g, "\n").replace(/\r\n?/g, "\n");
 }
 
 /* ---------------- Pure helpers (operate on a provided list) ---------------- */

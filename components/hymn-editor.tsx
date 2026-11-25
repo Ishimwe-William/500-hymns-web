@@ -9,6 +9,8 @@ import { orderedSections, sectionHeading, sectionsToBlocks } from "@/lib/hymn-se
 import { lyricsTextFor, type Hymn, type HymnSection } from "@/lib/hymns";
 import { useAuth } from "@/lib/auth-store";
 import { IconChevronRight, IconPlus, IconTrash } from "@/components/icons";
+import { SectionLyrics } from "@/components/section-lyrics";
+import { LyricSectionEditor } from "@/components/lyric-section-editor";
 
 type SaveState = "idle" | "saving" | "saved" | "saved-stale" | "error";
 
@@ -26,7 +28,8 @@ export function HymnEditor({
   const [title, setTitle] = useState(hymn.title);
   const [origin, setOrigin] = useState(hymn.origin ?? "");
   const [keySig, setKeySig] = useState(hymn.key ?? "");
-  const [audioUrl, setAudioUrl] = useState(hymn.youtubeUrl ?? "");
+  const [audioUrl, setAudioUrl] = useState(hymn.audioUrl ?? "");
+  const [youtubeUrl, setYoutubeUrl] = useState(hymn.youtubeUrl ?? "");
   const [sections, setSections] = useState<HymnSection[]>(
     orderedSections(hymn.sections).map((s) => ({ ...s, lines: [...s.lines] }))
   );
@@ -94,10 +97,9 @@ export function HymnEditor({
     setErrors([]);
     setSaveState("saving");
 
-    const link = audioUrl.trim();
-    const ytMatch = link.match(
-      /(?:youtube\.com\/watch\?v=|youtu\.be\/)([\w-]{6,})/
-    );
+    const videoLink = youtubeUrl.trim();
+    const videoId = videoLink.match(/(?:[?&]v=|youtu\.be\/|youtube\.com\/(?:shorts|embed|live)\/)([\w-]{11})(?:[^\w-]|$)/)?.[1]
+      ?? (/^[\w-]{11}$/.test(videoLink) ? videoLink : null);
     const { stanzas, refrains } = sectionsToBlocks(sections);
 
     const payload: Record<string, unknown> = {
@@ -108,9 +110,10 @@ export function HymnEditor({
       stanzas,
       refrains,
       lyrics_text: lyricsTextFor(orderedSections(sections)),
+      audio_url: audioUrl.trim() || null,
+      youtube: videoId,
+      youtube_url: videoLink || null,
     };
-    if (ytMatch) payload.youtube = ytMatch[1];
-    else if (link) payload.audio_url = link;
 
     try {
       const query = new URLSearchParams({ id: `eq.${hymn.id}`, select: "id" });
@@ -261,7 +264,7 @@ export function HymnEditor({
 
           <label className="block">
             <span className="mb-1.5 block text-sm font-medium text-foreground">
-              Audio / YouTube URL
+              Audio URL
             </span>
             <input
               className={inputCls}
@@ -272,6 +275,12 @@ export function HymnEditor({
               }}
               placeholder="https://…"
             />
+          </label>
+
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-medium text-foreground">YouTube URL</span>
+            <input className={inputCls} value={youtubeUrl} onChange={event => { setYoutubeUrl(event.target.value); markDirty(); }} placeholder="https://www.youtube.com/watch?v=…" />
+            <p className="mt-1.5 text-xs text-muted">The recording and YouTube video are saved separately. Clear a field to remove its link.</p>
           </label>
 
           {/* Sections */}
@@ -349,20 +358,7 @@ export function HymnEditor({
                     <IconTrash width={15} height={15} />
                   </button>
                 </div>
-                <textarea
-                  className={`${inputCls} min-h-28 resize-y font-mono text-[13px] leading-relaxed`}
-                  value={section.lines.join("\n")}
-                  onChange={(e) => {
-                    const lines = e.target.value.split("\n");
-                    setSections((prev) =>
-                      prev.map((s, j) =>
-                        j === si ? { ...s, lines } : s
-                      )
-                    );
-                    markDirty();
-                  }}
-                  placeholder="One lyric line per row…"
-                />
+                <LyricSectionEditor section={section} onChange={patch => updateSection(si, patch)} />
               </div>
             ))}
           </div>
@@ -406,20 +402,17 @@ export function HymnEditor({
                   <p className="mb-2 text-xs font-semibold uppercase tracking-[0.2em] text-muted">
                     {sectionHeading(section)}
                   </p>
-                  {section.lines
-                    .filter((l) => l.trim())
-                    .map((line, li) => (
-                      <p key={li}>{line}</p>
-                    ))}
+                  <p><SectionLyrics section={section} /></p>
                 </section>
               ))}
             </div>
             {audioUrl && (
               <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted">
                 <IconChevronRight width={12} height={12} />
-                Audio link set — will appear as available
+                Audio recording linked
               </p>
             )}
+            {youtubeUrl && <p className="mt-2 text-center text-xs text-muted">YouTube video linked</p>}
           </div>
         </div>
       </div>

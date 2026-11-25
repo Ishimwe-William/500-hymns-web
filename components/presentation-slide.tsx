@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import type { HymnSection } from "@/lib/hymns";
 import { sectionHeading } from "@/lib/hymn-sections";
+import { SectionLyrics } from "@/components/section-lyrics";
 
 export function PresentationSlide({ section, number, title, fontSize, blank = false }: {
   section?: HymnSection;
@@ -43,7 +44,7 @@ export function PresentationSlide({ section, number, title, fontSize, blank = fa
           <div ref={textRef} style={{ width: "100%", textAlign: "center", fontWeight: 500, lineHeight: 1.45, overflowWrap: "anywhere" }}>
             {section ? <>
               <p style={{ margin: "0 0 0.8em", fontSize: "0.38em", textTransform: "uppercase", letterSpacing: "0.15em", color: section.type === "refrain" ? "#ffb74d" : "#aaa" }}>{sectionHeading(section)}</p>
-              {section.lines.filter((line) => line.trim()).map((line, index) => <p key={index} style={{ margin: "0.18em 0" }}>{line}</p>)}
+              <p style={{ margin: "0.18em 0" }}><SectionLyrics section={section} /></p>
             </> : <p style={{ margin: 0, color: "#aaa" }}>End of hymn</p>}
           </div>
         </div>

@@ -1,4 +1,61 @@
-import type { HymnSection } from "./hymns";
+import type { HymnSection, UnderlineTarget } from "./hymns";
+
+/** Accept pasted escape sequences as well as actual textarea line breaks. */
+export function normalizeLyricText(text: string): string {
+  return text.replace(/\\r\\n|\\n|\\r/g, "\n").replace(/\r\n?/g, "\n");
+}
+
+/** Convert a textarea selection to the mobile app's word/occurrence format. */
+export function underlineForSelection(text: string, start: number, end: number): { word: string; occurrence: number } | null {
+  if (start < 0 || end > text.length || end <= start) return null;
+  const word = normalizeLyricText(text.slice(start, end));
+  if (!word.trim()) return null;
+  const position = normalizeLyricText(text.slice(0, start)).length;
+  const normalized = normalizeLyricText(text);
+  let match = -1, occurrence = 0;
+  do {
+    match = normalized.indexOf(word, match + 1);
+    if (match < 0 || match > position) return null;
+    occurrence++;
+  } while (match < position);
+  return { word, occurrence };
+}
+
+export function lyricSegments(text: string, underline: UnderlineTarget[] = []) {
+  text = normalizeLyricText(text);
+  const ranges: { start: number; end: number }[] = [];
+  for (const target of underline) {
+    const word = normalizeLyricText(typeof target === "string" ? target : target.word);
+    const occurrence = typeof target === "string" ? 1 : target.occurrence;
+    if (!word || !Number.isInteger(occurrence) || occurrence < 1) continue;
+    let start = -1;
+    for (let i = 0; i < occurrence; i++) {
+      start = text.indexOf(word, start + 1);
+      if (start < 0) break;
+    }
+    if (start >= 0) ranges.push({ start, end: start + word.length });
+  }
+  ranges.sort((a, b) => a.start - b.start);
+  const parts: { text: string; underlined: boolean }[] = [];
+  let end = 0;
+  for (const range of ranges) {
+    if (range.start < end) continue;
+    if (range.start > end) parts.push({ text: text.slice(end, range.start), underlined: false });
+    parts.push({ text: text.slice(range.start, range.end), underlined: true });
+    end = range.end;
+  }
+  if (end < text.length) parts.push({ text: text.slice(end), underlined: false });
+  return parts;
+}
+
+function underlineTargets(value: unknown): UnderlineTarget[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value.flatMap((target): UnderlineTarget[] => {
+    if (typeof target === "string") return target.trim() ? [target] : [];
+    if (target && typeof target.word === "string" && target.word.trim() && Number.isInteger(target.occurrence) && target.occurrence > 0) return [{ word: target.word, occurrence: target.occurrence }];
+    return [];
+  });
+}
 
 /** Display labels are independent of the stored section numbering and labels. */
 export function sectionHeading(section: HymnSection): string {
@@ -45,7 +102,8 @@ export function sectionsFromBlocks(stanzas: unknown, refrains: unknown): HymnSec
         type,
         number,
         label: `${type === "verse" ? "Verse" : "Refrain"} ${number}`,
-        lines: block.text.split("\n").map((line) => line.trim()).filter(Boolean),
+        lines: normalizeLyricText(block.text).split("\n"),
+        ...(Array.isArray(block.underline) ? { underline: underlineTargets(block.underline) } : {}),
       });
     });
   }
@@ -56,9 +114,9 @@ export function sectionsToBlocks(sections: HymnSection[]) {
   const ordered = orderedSections(sections);
   return {
     stanzas: ordered.filter((s) => s.type === "verse")
-      .map((s) => ({ stanzaNumber: s.number!, text: s.lines.join("\n") })),
+      .map((s) => ({ stanzaNumber: s.number!, text: normalizeLyricText(s.lines.join("\n")), ...(s.underline ? { underline: underlineTargets(s.underline) } : {}) })),
     refrains: ordered.filter((s) => s.type === "refrain")
-      .map((s) => ({ refrainNumber: s.number!, text: s.lines.join("\n") })),
+      .map((s) => ({ refrainNumber: s.number!, text: normalizeLyricText(s.lines.join("\n")), ...(s.underline ? { underline: underlineTargets(s.underline) } : {}) })),
   };
 }
 

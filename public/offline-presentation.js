@@ -36,6 +36,7 @@ window.HymnOfflinePresentation = {
         value.append(node(doc, "p", `Hymn ${hymn.number} · ${hymn.title}`, "slide-title"));
         value.append(node(doc, "h2", heading(section)));
         const lyrics = node(doc, "p", section.lines.join("\n"), "slide-lyrics");
+        window.renderHymnLyrics(lyrics, section);
         value.append(lyrics);
         doc.defaultView.requestAnimationFrame(() => {
           if (!lyrics.isConnected) return;

@@ -49,6 +49,7 @@
         const block = element("section", "", section.type);
         if (settings.showVerseNumbers) block.append(element("h2", section.type === "refrain" ? "Refrain" : String(section.number ?? index + 1)));
         const lyrics = element("p", section.lines.join("\n"), "lyrics");
+        window.renderHymnLyrics(lyrics, section);
         lyrics.style.fontSize = `${Math.min(30, Math.max(16, Number(settings.fontSize) || 22))}px`;
         block.append(lyrics); reader.append(block);
       });
